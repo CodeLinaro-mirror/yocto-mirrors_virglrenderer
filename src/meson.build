@@ -117,6 +117,20 @@ drm_amdgpu_sources = [
    'drm/amdgpu/amdgpu_renderer.c',
 ]
 
+hsakmt_amdgpu_source = [
+   'hsakmt/hsakmt_device.h',
+   'hsakmt/hsakmt_device.c',
+   'hsakmt/hsakmt_context.h',
+   'hsakmt/hsakmt_context.c',
+   'hsakmt/hsakmt_vm.h',
+   'hsakmt/hsakmt_vm.c',
+   'hsakmt/hsakmt_hw.h',
+   'hsakmt/util/rbtree_amd.h',
+   'hsakmt/util/rbtree.h',
+   'hsakmt/util/rbtree.c',
+   'hsakmt/util/hsakmt_util.h',
+]
+
 proxy_sources = [
    'proxy/proxy_client.c',
    'proxy/proxy_common.c',
@@ -183,6 +197,12 @@ endif
 
 if with_drm_amdgpu
    virgl_sources += drm_amdgpu_sources
+   virgl_depends += [libdrm_amdgpu_dep]
+endif
+
+if with_hsakmt_amdgpu
+   virgl_sources += hsakmt_amdgpu_source
+   virgl_depends += [libhsakmt_dep]
    virgl_depends += [libdrm_amdgpu_dep]
 endif
 

@@ -93,6 +93,11 @@ conf_data.set('_GNU_SOURCE', 1)
 # APIs. Unstable APIs may be changed or removed without a notice.
 conf_data.set('VIRGL_RENDERER_UNSTABLE_APIS', 1)
 
+with_hsakmt_amdgpu = get_option('hsakmt-amdgpu-experimental')
+if with_hsakmt_amdgpu
+  conf_data.set('ENABLE_HSAKMT_AMDGPU', 1)
+endif
+
 drm_renderers = get_option('drm-renderers')
 
 with_drm_msm = drm_renderers.contains('msm')
@@ -107,14 +112,16 @@ endif
 
 with_drm_renderers = drm_renderers.length() > 0
 
-libdrm_dep = dependency('libdrm', version : '>=2.4.50', required: with_drm_renderers or get_option('video'))
-libdrm_amdgpu_dep = dependency('libdrm_amdgpu', version : '>=2.4.121', required: with_drm_amdgpu)
+libdrm_dep = dependency('libdrm', version : '>=2.4.50', required: with_drm_renderers or get_option('video') or with_hsakmt_amdgpu)
+libdrm_amdgpu_dep = dependency('libdrm_amdgpu', version : '>=2.4.121', required: with_drm_amdgpu or with_hsakmt_amdgpu)
 conf_data.set('ENABLE_DRM', libdrm_dep.found())
 drm_uapi_dep = declare_dependency(
    include_directories: include_directories('src' / 'drm' / 'drm-uapi')
 )
 
 pkg_cflags = []
+
+libhsakmt_dep = dependency('libhsakmt', version: '>=1.0.6', required: with_hsakmt_amdgpu)
 
 has_attribute_cleanup = cc.compiles('''
    void func(void *v) {}
@@ -432,6 +439,7 @@ summary({'c_args': (' ').join(get_option('c_args')),
         'drm-msm': with_drm_msm,
         'render server (DEPRECATED)': with_render_server,
         'drm-amdgpu': with_drm_amdgpu,
+        'hsakmt-amdgpu': with_hsakmt_amdgpu,
         'render server worker': with_render_server ? with_render_server_worker : 'none',
         'video': with_video,
         'tests': with_tests,
