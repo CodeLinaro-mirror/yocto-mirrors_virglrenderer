@@ -1133,9 +1133,10 @@ int virgl_renderer_resource_create_blob(const struct virgl_renderer_resource_cre
    TRACE_FUNC();
    struct virgl_resource *res;
    struct virgl_context *ctx;
-   struct virgl_context_blob blob;
+   struct virgl_context_blob blob = {0};
    bool has_host_storage;
    bool has_guest_storage;
+   bool has_guest_mapped_blob;
    int ret;
 
    switch (args->blob_mem) {
@@ -1155,6 +1156,9 @@ int virgl_renderer_resource_create_blob(const struct virgl_renderer_resource_cre
       return -EINVAL;
    }
 
+   if (args->blob_flags & VIRGL_RENDERER_BLOB_FLAG_USE_USERPTR)
+      has_guest_mapped_blob = true;
+
    /* user resource id must be greater than 0 */
    if (args->res_handle == 0)
       return -EINVAL;
@@ -1165,7 +1169,8 @@ int virgl_renderer_resource_create_blob(const struct virgl_renderer_resource_cre
 
    if (args->size == 0)
       return -EINVAL;
-   if (has_guest_storage) {
+
+   if (has_guest_storage && !has_guest_mapped_blob) {
       const size_t iov_size = vrend_get_iovec_size(args->iovecs, args->num_iovs);
       if (iov_size < args->size)
          return -EINVAL;
@@ -1175,14 +1180,21 @@ int virgl_renderer_resource_create_blob(const struct virgl_renderer_resource_cre
    }
 
    if (!has_host_storage) {
-      res = virgl_resource_create_from_iov(args->res_handle,
-                                           args->iovecs,
-                                           args->num_iovs);
-      if (!res)
-         return -ENOMEM;
+     res = virgl_resource_create_from_iov(args->res_handle, args->iovecs,
+                                          args->num_iovs);
+     if (!res)
+       return -ENOMEM;
 
-      res->map_info = VIRGL_RENDERER_MAP_CACHE_CACHED;
-      return 0;
+     res->map_info = VIRGL_RENDERER_MAP_CACHE_CACHED;
+     return 0;
+   }
+
+   if (has_guest_mapped_blob) {
+     if (!args->guest_blob_mapped)
+       return -EINVAL;
+
+     /* let guest mapped blob memory go to context get_blob path */
+     blob.u.va_handle = args->guest_blob_mapped;
    }
 
    ctx = virgl_context_lookup(args->ctx_id);
