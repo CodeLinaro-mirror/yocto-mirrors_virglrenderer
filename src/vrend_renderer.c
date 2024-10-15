@@ -12448,13 +12448,20 @@ static void vrend_renderer_fill_caps_v2(int gl_ver, int gles_ver,  union virgl_c
       glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, (GLint*)&caps->v2.shader_buffer_offset_alignment);
 
       glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &max);
-      if (max > PIPE_MAX_SHADER_BUFFERS)
-         max = PIPE_MAX_SHADER_BUFFERS;
-      caps->v2.max_shader_buffer_other_stages = max;
+      caps->v2.max_shader_buffer_other_stages = MIN2(max, PIPE_MAX_SHADER_BUFFERS);
+      caps->v2.max_shader_storage_blocks[PIPE_SHADER_VERTEX] = caps->v2.max_shader_buffer_other_stages;
       glGetIntegerv(GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &max);
-      if (max > PIPE_MAX_SHADER_BUFFERS)
-         max = PIPE_MAX_SHADER_BUFFERS;
-      caps->v2.max_shader_buffer_frag_compute = max;
+      caps->v2.max_shader_buffer_frag_compute = MIN2(max, PIPE_MAX_SHADER_BUFFERS);
+      caps->v2.max_shader_storage_blocks[PIPE_SHADER_FRAGMENT] = caps->v2.max_shader_buffer_frag_compute;
+      glGetIntegerv(GL_MAX_GEOMETRY_SHADER_STORAGE_BLOCKS, &max);
+      caps->v2.max_shader_storage_blocks[PIPE_SHADER_GEOMETRY] = MIN2(max, PIPE_MAX_SHADER_BUFFERS);
+      glGetIntegerv(GL_MAX_TESS_CONTROL_SHADER_STORAGE_BLOCKS, &max);
+      caps->v2.max_shader_storage_blocks[PIPE_SHADER_TESS_CTRL] = MIN2(max, PIPE_MAX_SHADER_BUFFERS);
+      glGetIntegerv(GL_MAX_TESS_EVALUATION_SHADER_STORAGE_BLOCKS, &max);
+      caps->v2.max_shader_storage_blocks[PIPE_SHADER_TESS_EVAL] = MIN2(max, PIPE_MAX_SHADER_BUFFERS);
+      glGetIntegerv(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &max);
+      caps->v2.max_shader_storage_blocks[PIPE_SHADER_COMPUTE] = MIN2(max, PIPE_MAX_SHADER_BUFFERS);
+
       glGetIntegerv(GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS, &max);
       /* We use a 32 bit mask for the binding points and the binding points
        * must be sufficient for all shader stages combined. */
