@@ -128,12 +128,6 @@ spec@arb_depth_texture@texwrap formats bordercolor-swizzled@GL_DEPTH_COMPONENT16
 spec@arb_depth_texture@texwrap formats bordercolor-swizzled@GL_DEPTH_COMPONENT24- swizzled- border color only,Fail
 spec@arb_depth_texture@texwrap formats bordercolor-swizzled@GL_DEPTH_COMPONENT32- swizzled- border color only,Fail
 spec@arb_draw_indirect@arb_draw_indirect-draw-elements-prim-restart-ugly,Fail
-spec@arb_enhanced_layouts@linker@component-layout@intrastage-vs,Fail
-spec@arb_enhanced_layouts@linker@component-layout@vs-to-fs,Fail
-spec@arb_enhanced_layouts@matching_basic_types_3_loc_1,Fail
-spec@arb_enhanced_layouts@matching_fp64_types_1_loc_1,Fail
-spec@arb_enhanced_layouts@matching_fp64_types_2_loc_1,Fail
-spec@arb_enhanced_layouts@matching_fp64_types_3_loc_1,Fail
 spec@arb_es2_compatibility@texwrap formats bordercolor,Fail
 spec@arb_es2_compatibility@texwrap formats bordercolor@GL_RGB565- border color only,Fail
 spec@arb_es2_compatibility@texwrap formats bordercolor-swizzled,Fail
@@ -707,8 +701,6 @@ spec@glsl-1.30@execution@tex-miplevel-selection textureprojoffset 2d_projvec4,Fa
 spec@glsl-1.30@execution@tex-miplevel-selection textureprojoffset 2dshadow,Fail
 spec@glsl-1.30@execution@tex-miplevel-selection textureprojoffset 3d,Fail
 spec@glsl-1.30@execution@vs-texturelod-miplevels-biased,Fail
-spec@glsl-1.50@built-in constants,Fail
-spec@glsl-1.50@built-in constants@gl_MaxGeometryOutputComponents,Fail
 spec@glsl-1.50@execution@geometry@primitive-id-restart gl_line_loop other,Fail
 spec@glsl-1.50@execution@geometry@primitive-id-restart gl_line_strip_adjacency other,Fail
 spec@glsl-1.50@execution@geometry@primitive-id-restart gl_line_strip other,Fail
@@ -721,8 +713,6 @@ spec@glsl-1.50@execution@primitive-id-no-gs-first-vertex,Fail
 spec@glsl-1.50@execution@primitive-id-no-gs-quads,Fail
 spec@glsl-1.50@execution@primitive-id-no-gs-quad-strip,Fail
 spec@glsl-1.50@execution@primitive-id-no-gs-strip-first-vertex,Fail
-spec@glsl-3.30@built-in constants,Fail
-spec@glsl-3.30@built-in constants@gl_MaxGeometryOutputComponents,Fail
 spec@glsl-4.00@execution@built-in-functions@fs-abs-double,Fail
 spec@glsl-4.00@execution@built-in-functions@fs-abs-dvec2,Fail
 spec@glsl-4.00@execution@built-in-functions@fs-abs-dvec3,Fail
@@ -3092,10 +3082,8 @@ spec@!opengl 3.2@gl-3.2-adj-prims line cull-back pv-first,ExpectedFail
 spec@!opengl 3.2@gl-3.2-adj-prims line cull-front pv-first,ExpectedFail
 spec@!opengl 3.2@gl-3.2-adj-prims pv-first,ExpectedFail
 spec@!opengl 3.2@layered-rendering@clear-color-mismatched-layer-count,ExpectedFail
-spec@!opengl 3.2@minmax,Fail
 spec@!opengl 3.2@pointsprite-coord,Fail
 spec@!opengl 3.2@pointsprite-origin,Fail
-spec@!opengl 3.3@minmax,Fail
 spec@!opengl 1.1@line-smooth-stipple,Fail
 spec@arb_vertex_attrib_64bit@execution@unused-sub-dvec4-01,Fail
 spec@arb_vertex_attrib_64bit@execution@unused-sub-dvec4-02,Fail

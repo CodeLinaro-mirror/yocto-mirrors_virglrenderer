@@ -12400,7 +12400,7 @@ static void vrend_renderer_fill_caps_v2(int gl_ver, int gles_ver,  union virgl_c
 
    caps->v2.max_vertex_attribs = vrend_state.max_vertex_attributes;
 
-   if (gl_ver >= 32 || (vrend_state.use_gles && gl_ver >= 30))
+   if (gl_ver >= 32 || gles_ver >= 30)
       glGetIntegerv(GL_MAX_VERTEX_OUTPUT_COMPONENTS, &max);
    else
       max = 64; // minimum required value
