@@ -190,6 +190,12 @@ struct vhsakmt_ccmd_query_info_rsp {
       query_nano_time_rsp nano_time_rsp;
       HsaGpuTileConfig tile_config_rsp;
       HsaPointerInfo ptr_info;
+      struct amdgpu_gpu_info gpu_info;
+      HsaVersionInfo kfd_version;
+      HsaSystemProperties sys_props;
+      HsaNodeProperties node_props;
+      int32_t xnack_mode;
+      HsaClockCounters clock_counters;
       uint64_t pad[9];
    };
    uint8_t payload[];
@@ -287,6 +293,7 @@ DEFINE_CAST(vhsakmt_ccmd_req, vhsakmt_ccmd_event_req)
 struct vhsakmt_ccmd_event_rsp {
    struct vhsakmt_ccmd_rsp hdr;
    int32_t ret;
+   vHsaEvent vevent;
    uint8_t payload[];
 };
 VHSAKMT_STATIC_ASSERT_SIZE(vhsakmt_ccmd_event_rsp)

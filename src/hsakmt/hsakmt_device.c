@@ -567,11 +567,8 @@ static int vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
       break;
    }
    case VHSAKMT_CCMD_QUERY_GPU_INFO: {
-      struct amdgpu_gpu_info a;
       amdgpu_device_handle dev_handle;
       int fd;
-
-      rsp_len = size_add(sizeof(struct amdgpu_gpu_info), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
 
       fd = init_amdgpu_drm(&dev_handle);
@@ -580,8 +577,7 @@ static int vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
          break;
       }
 
-      rsp->ret = amdgpu_query_gpu_info(dev_handle, &a);
-      memcpy(rsp->payload, &a, sizeof(a));
+      rsp->ret = amdgpu_query_gpu_info(dev_handle, &rsp->gpu_info);
 
       deinit_amdgpu_drm(fd, dev_handle);
 
@@ -633,11 +629,9 @@ static int vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
       void *temp_macro_tile_config =
           req->tile_config_args.config.MacroTileConfig;
 
-      rsp->tile_config_rsp.TileConfig =
-          (HSAuint32 *)rsp->payload + memcpy_offset;
-      memcpy_offset += rsp->tile_config_rsp.NumTileConfigs * sizeof(HSAuint32);
-      rsp->tile_config_rsp.MacroTileConfig =
-          (HSAuint32 *)rsp->payload + memcpy_offset;
+        rsp->tile_config_rsp.TileConfig = (void*)rsp->payload;
+        rsp->tile_config_rsp.MacroTileConfig = (void*)((uint8_t *)rsp->payload + 
+            rsp->tile_config_rsp.NumTileConfigs * sizeof(HSAuint32));
 
       rsp->ret = hsaKmtGetTileConfig(req->tile_config_args.NodeId,
                                      &rsp->tile_config_rsp);
@@ -647,13 +641,8 @@ static int vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_VER: {
-      HsaVersionInfo kfd_version;
-
-      rsp_len = size_add(sizeof(HsaVersionInfo), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
-      rsp->ret = hsaKmtGetVersion(&kfd_version);
-      memcpy(rsp->payload, &kfd_version, sizeof(HsaVersionInfo));
+      rsp->ret = hsaKmtGetVersion(&rsp->kfd_version);
 
       break;
    }
@@ -666,35 +655,20 @@ static int vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_SYS_PROP: {
-      HsaSystemProperties p;
-
-      rsp_len = size_add(sizeof(HsaSystemProperties), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
-      rsp->ret = hsaKmtAcquireSystemProperties(&p);
-      memcpy(rsp->payload, &p, sizeof(HsaSystemProperties));
+      rsp->ret = hsaKmtAcquireSystemProperties(&rsp->sys_props);
 
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_NODE_PROP: {
-      HsaNodeProperties p;
-
-      rsp_len = size_add(sizeof(HsaNodeProperties), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
-      rsp->ret = hsaKmtGetNodeProperties(req->NodeID, &p);
-      memcpy(rsp->payload, &p, sizeof(HsaNodeProperties));
+      rsp->ret = hsaKmtGetNodeProperties(req->NodeID, &rsp->node_props);
 
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_XNACK_MODE: {
-      HSAuint32 e;
-
-      rsp_len = size_add(sizeof(HSAuint32), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
-      rsp->ret = hsaKmtGetXNACKMode((HSAint32 *)(&e));
-      memcpy(rsp->payload, &e, sizeof(HSAuint32));
+      rsp->ret = hsaKmtGetXNACKMode(&rsp->xnack_mode);
 
       break;
    }
@@ -803,13 +777,8 @@ static int vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_CLOCK_COUNTERS: {
-      HsaClockCounters Counters;
-
-      rsp_len = size_add(sizeof(HsaClockCounters), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
-      rsp->ret = hsaKmtGetClockCounters(req->NodeID, &Counters);
-      memcpy(rsp->payload, &Counters, sizeof(HsaClockCounters));
+      rsp->ret = hsaKmtGetClockCounters(req->NodeID, &rsp->clock_counters);
 
       break;
    }
@@ -864,8 +833,7 @@ static int vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx,
 
    switch (req->type) {
    case VHSAKMT_CCMD_EVENT_CREATE: {
-      unsigned rsp_len = size_add(sizeof(*rsp), sizeof(vHsaEvent));
-      VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
+      VHSA_RSP_ALLOC(ctx, hdr, sizeof(*rsp));
       HsaEvent *e = NULL;
       struct vhsakmt_object *obj;
 
@@ -878,8 +846,8 @@ static int vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx,
                   (void *)e, e->EventId, rsp->ret);
          break;
       }
-      memcpy(rsp->payload, e, sizeof(*e));
-      ((vHsaEvent *)rsp->payload)->event_handle = (uint64_t)e;
+      memcpy(&rsp->vevent, e, sizeof(*e));
+      rsp->vevent.event_handle = (uint64_t)e;
 
       obj = vhsakmt_object_create(e, 0, sizeof(*e), VHSAKMT_OBJ_EVENT);
       assert(obj);
