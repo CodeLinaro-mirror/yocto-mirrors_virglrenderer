@@ -405,7 +405,7 @@ enum virgl_formats {
    VIRGL_FORMAT_Y8_400_UNORM            = 322,
    VIRGL_FORMAT_Y8_U8_V8_444_UNORM      = 323,
    VIRGL_FORMAT_Y8_U8_V8_422_UNORM      = 324,
-   VIRGL_FORMAT_Y8_U8V8_422_UNORM       = 325,
+   VIRGL_FORMAT_NV16                    = 325, /* aka Y8_U8V8_422_UNORM */
    VIRGL_FORMAT_Y8_UNORM                = 326,
    VIRGL_FORMAT_YVYU                    = 327,
    VIRGL_FORMAT_Z16_UNORM_S8_UINT       = 328,
@@ -523,6 +523,17 @@ enum virgl_formats {
    VIRGL_FORMAT_Y410                    = 440,
    VIRGL_FORMAT_Y412                    = 441,
    VIRGL_FORMAT_Y416                    = 442,
+   VIRGL_FORMAT_NV15                    = 443,
+   VIRGL_FORMAT_NV20                    = 444,
+   VIRGL_FORMAT_Y8_U8_V8_440_UNORM      = 445,
+   VIRGL_FORMAT_R10_G10B10_420_UNORM    = 446,
+   VIRGL_FORMAT_R10_G10B10_422_UNORM    = 447,
+   VIRGL_FORMAT_X6G10_X6B10X6R10_420_UNORM = 448,
+   VIRGL_FORMAT_X4G12_X4B12X4R12_420_UNORM = 449,
+   VIRGL_FORMAT_X6R10_UNORM             = 450,
+   VIRGL_FORMAT_X6R10X6G10_UNORM        = 451,
+   VIRGL_FORMAT_X4R12_UNORM             = 452,
+   VIRGL_FORMAT_X4R12X4G12_UNORM        = 453,
    VIRGL_FORMAT_MAX /* = PIPE_FORMAT_COUNT */,
 
    /* Below formats must not be used in the guest. */

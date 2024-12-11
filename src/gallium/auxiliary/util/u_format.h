@@ -185,6 +185,16 @@ struct util_format_description
    unsigned is_mixed:1;
 
    /**
+    * Whether the format contains UNORM channels
+    */
+   unsigned is_unorm:1;
+
+   /**
+    * Whether the format contains SNORM channels
+    */
+   unsigned is_snorm:1;
+
+   /**
     * Input channel description, in the order XYZW.
     *
     * Only valid for UTIL_FORMAT_LAYOUT_PLAIN formats.
@@ -228,6 +238,16 @@ struct util_format_description
     * Colorspace transformation.
     */
    enum util_format_colorspace colorspace;
+
+   /**
+    * For sRGB formats, equivalent linear format; for linear formats,
+    * equivalent sRGB format
+    */
+   union {
+      enum pipe_format srgb_equivalent;
+      enum pipe_format linear_equivalent;
+   };
+
 };
 
 
