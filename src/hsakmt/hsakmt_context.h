@@ -45,8 +45,6 @@ struct vhsakmt_context {
    const char *debug_name;
    uint32_t pid;
 
-   void *doorbell_base_addr;
-
    amdgpu_device_handle dev;
    int debug;
 

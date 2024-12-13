@@ -52,7 +52,7 @@
 #include "util/hsakmt_util.h"
 #include <hsakmt/hsakmt.h>
 
-static struct vhsa_backend backend = {
+static struct vhsakmt_backend backend = {
     .context_type = VIRTGPU_HSAKMT_OCL,
     .name = "amdgpu-hsakmt",
     .vamgr_vm_base_addr_type = VHSA_VAMGR_VM_TYPE_FIXED_BASE,
@@ -61,7 +61,27 @@ static struct vhsa_backend backend = {
     .vamgr_vm_kfd_size = VHSA_DEV_RESERVE_SIZE,
     .vamgr_vm_scratch_size = VHSA_DEV_SCRATCH_RESERVE_SIZE,
     .vamgr_vm_context_size = VHSA_CTX_RESERVE_SIZE,
+    .vhsakmt_open_count = 0,
+    .vhsakmt_num_nodes = 0,
+    .vhsakmt_nodes = NULL,
+    .hsakmt_mutex = PTHREAD_MUTEX_INITIALIZER,
 };
+
+static inline struct vhsakmt_backend *vhsakmt_backend(void) { return &backend; }
+
+static inline bool vhsakmt_is_gpu_node(struct vhsakmt_node *n)
+{
+   return n->node_props.KFDGpuID != 0;
+}
+
+static struct vhsakmt_node *vhsakmt_get_node(struct vhsakmt_backend *b,
+                                             uint32_t node_id)
+{
+   if (!b->vhsakmt_num_nodes || node_id >= b->vhsakmt_num_nodes)
+      return NULL;
+
+   return &b->vhsakmt_nodes[node_id];
+}
 
 static inline uint64_t vhsakmt_doorbell_page_size() { return 0x2000; }
 static inline uint64_t vhsakmt_queue_page_size() { return getpagesize(); }
@@ -162,6 +182,25 @@ static int vhsakmt_free_scratch_map_mem(struct vhsakmt_context *ctx,
    return vhsakmt_gpu_unmap(obj);
 }
 
+static int
+vhsakmt_free_scratch_reserve_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
+{
+    uint32_t i;
+
+    for (i = 0; i < vhsakmt_backend()->vhsakmt_num_nodes; i++)
+    {
+        struct vhsakmt_node *node = &vhsakmt_backend()->vhsakmt_nodes[i];
+        if (obj->bo >= (void*)node->scratch_vamgr.vm_va_base_addr && obj->bo < (void*)node->scratch_vamgr.vm_va_high_addr)
+        {
+            vhsa_log("free scratch reserve memory in node[%d]: %p, size: %lx", i, obj->bo, obj->base.size);
+            hsakmt_free_from_vamgr(&node->scratch_vamgr, (uint64_t)obj->bo);
+            break;
+        }
+    }
+
+    return 0;
+}
+
 static inline bool vhsakmt_is_scratch_obj(struct vhsakmt_object *obj)
 {
    if (!obj)
@@ -190,7 +229,7 @@ static int vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
    vhsa_dbg("free hsakmt mem addr: %p", obj->bo);
 
    if (vhsakmt_is_scratch_obj(obj))
-      hsakmt_free_from_vamgr(&backend.scratch_vamgr, (uint64_t)obj->bo);
+      vhsakmt_free_scratch_reserve_mem(ctx, obj);
    else {
       hsaKmtFreeMemory(obj->bo, obj->base.size);
 
@@ -350,11 +389,21 @@ static void vhsakmt_free_object(struct vhsakmt_base_context *bctx,
 static void vhsakmt_device_destroy(struct virgl_context *vctx)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(to_drm_context(vctx));
+   uint32_t i;
 
    vhsakmt_context_deinit(ctx);
 
-   hsakmt_free_from_vamgr(&backend.vamgr, ctx->vamgr.vm_va_base_addr);
-   hsakmt_free_from_vamgr(&backend.scratch_vamgr, ctx->scratch_base);
+   hsakmt_free_from_vamgr(&vhsakmt_backend()->vamgr, ctx->vamgr.vm_va_base_addr);
+   // hsakmt_free_from_vamgr(&vhsakmt_backend()->scratch_vamgr, ctx->scratch_base);
+
+   // free all nodes scratch memory
+   for (i = 0; i < vhsakmt_backend()->vhsakmt_num_nodes; i++)
+   {
+      if (vhsakmt_is_gpu_node(&vhsakmt_backend()->vhsakmt_nodes[i]))
+         hsakmt_free_from_vamgr(&vhsakmt_backend()->vhsakmt_nodes[i].scratch_vamgr,
+            (uint64_t)vhsakmt_backend()->vhsakmt_nodes[i].scratch_base);
+   }
+
    free((void *)ctx->debug_name);
    free(ctx);
 }
@@ -470,7 +519,7 @@ static int vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id,
 
    if (blob_flags & VIRGL_RENDERER_BLOB_FLAG_USE_SHAREABLE) {
       vhsa_err("VIRGL_RENDERER_BLOB_FLAG_USE_SHAREABLE is not supported in "
-               "libhsakmt backend.");
+               "libhsakmt vhsakmt_backend()->");
       return -EINVAL;
    } else {
       blob->type = VIRGL_RESOURCE_VA_HANDLE;
@@ -614,7 +663,6 @@ static int vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
          rsp->ret = -EINVAL;
          break;
       }
-      uint32_t memcpy_offset = 0;
 
       rsp_len = size_add(req->tile_config_args.config.NumTileConfigs *
                              sizeof(HSAuint32),
@@ -928,6 +976,79 @@ static int vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx,
    return 0;
 }
 
+static int
+vhsakmt_scratch_area_init(struct vhsakmt_context *ctx, struct vhsakmt_node *node, struct vhsakmt_ccmd_memory_req *req, struct vhsakmt_backend *b)
+{
+    int ret = 0;
+    void *mem;
+
+    pthread_mutex_lock(&b->hsakmt_mutex);
+
+    if (node->scratch_base)
+    {
+        ret = 0;
+        goto out;
+    }
+
+    mem = (void*)node->scratch_vamgr.vm_va_base_addr;
+
+    ret = hsaKmtAllocMemory(req->alloc_args.PreferredNode,
+                            node->scratch_vamgr.reserve_size,
+                            req->alloc_args.MemFlags,
+                            &mem);
+    vhsa_log("alloc scratch target: %p -> out: %p size: %lx ret: %d", mem, (void*)node->scratch_vamgr.vm_va_base_addr,
+        node->scratch_vamgr.reserve_size, ret);
+    if (ret || (node->scratch_vamgr.vm_va_base_addr != (uint64_t)mem))
+    {
+        vhsa_err("vhsakmt_alloc_memory failed: %d (%s)", ret, strerror(errno));
+        goto out;
+    }
+    node->scratch_base = (void*)node->scratch_vamgr.vm_va_base_addr;
+    pthread_mutex_unlock(&b->hsakmt_mutex);
+    return 0;
+
+out:
+    pthread_mutex_unlock(&b->hsakmt_mutex);
+    return ret;
+}
+
+static int
+vhsakmt_alloc_scratch_memory(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_memory_req *req, void **MemoryAddress)
+{
+    void *mem;
+    int ret = 0;
+
+    struct vhsakmt_node *node = vhsakmt_get_node(vhsakmt_backend(), req->alloc_args.PreferredNode);
+    if (!node)
+    {
+        vhsa_err("Invalid node %d", req->alloc_args.PreferredNode);
+        return HSAKMT_STATUS_INVALID_NODE_UNIT;
+    }
+
+    /* lazy init */
+    if (!node->scratch_base)
+    {
+        ret = vhsakmt_scratch_area_init(ctx, node, req, vhsakmt_backend());
+        if (ret)
+        {
+            vhsa_err("vhsakmt_scratch_area_init failed: %d (%s)", ret, strerror(errno));
+            return -ENOMEM;
+        }
+    }
+
+    mem = (void *)hsakmt_alloc_from_vamgr(&node->scratch_vamgr, req->alloc_args.SizeInBytes);
+    if (!mem)
+    {
+        vhsa_err("Can not alloc from vamgr size: %lx", req->alloc_args.SizeInBytes);
+        return -ENOMEM;
+    }
+
+    printf("scratch alloc: %p size: %lx\n", mem, req->alloc_args.SizeInBytes);
+
+    *MemoryAddress = mem;
+    return 0;
+}
+
 static int vhsakmt_alloc_memory(struct vhsakmt_context *ctx,
                                 struct vhsakmt_ccmd_memory_req *req,
                                 void **MemoryAddress)
@@ -944,32 +1065,11 @@ static int vhsakmt_alloc_memory(struct vhsakmt_context *ctx,
    req->alloc_args.MemFlags.ui32.FixedAddress = 1;
 
    if (req->alloc_args.MemFlags.ui32.Scratch) {
-      void *tmp_addr;
-      *MemoryAddress = (void *)hsakmt_alloc_from_vamgr(
-          &backend.scratch_vamgr, req->alloc_args.SizeInBytes);
-      if (!*MemoryAddress) {
-         vhsa_err("Can not alloc from vamgr size: %lx",
-                  req->alloc_args.SizeInBytes);
-         return HSAKMT_STATUS_NO_MEMORY;
-      }
-      tmp_addr = *MemoryAddress;
-      ctx->scratch_base = VOID2U64(tmp_addr);
-      vhsa_log("alloc scratch from pool: %p", tmp_addr);
-
-      if (!backend.scratch_addr) {
-         ret = hsaKmtAllocMemory(req->alloc_args.PreferredNode,
-                                 backend.scratch_vamgr.reserve_size,
-                                 req->alloc_args.MemFlags, MemoryAddress);
-         backend.scratch_addr = *MemoryAddress;
-         vhsa_log("alloc scratch in kfd: %p, size: %lx ret: %d", tmp_addr,
-                  backend.scratch_vamgr.reserve_size, ret);
-         if (ret) {
-            vhsa_err("vhsakmt_alloc_memory failed: %d (%s)", ret,
-                     strerror(errno));
-            hsakmt_free_from_vamgr(&backend.scratch_vamgr, (uint64_t)tmp_addr);
+        ret = vhsakmt_alloc_scratch_memory(ctx, req, MemoryAddress);
+        if (ret) {
+            vhsa_err("vhsakmt_alloc_scratch_memory failed: %d (%s)", ret, strerror(errno));
             goto alloc_failed;
-         }
-      }
+        }
    } else {
       void *tmp_addr = NULL;
       *MemoryAddress = (void *)hsakmt_alloc_from_vamgr(
@@ -1169,6 +1269,14 @@ static int vhsakmt_ccmd_queue(struct vhsakmt_base_context *bctx,
       rsp_len = size_add(sizeof(vHsaQueueResource), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
 
+      struct vhsakmt_node *node = vhsakmt_get_node(vhsakmt_backend(), req->create_queue_args.NodeId);
+      if (!node)
+      {
+         vhsa_err("Invalid node %d", req->create_queue_args.NodeId);
+         rsp->ret = HSAKMT_STATUS_INVALID_NODE_UNIT;
+         break;
+      }
+
       vHsaQueueResource *vqueue_res = calloc(1, sizeof(vHsaQueueResource));
       if (!vqueue_res) {
          vhsa_err("vhsakmt_ccmd_queue calloc failed");
@@ -1206,20 +1314,21 @@ QueueSizeInBytes: %lx Event: %p QueueResource: %p QueueId :%lx QueueId_ptr: %p r
       }
 
       /* create doorbell address resource. */
-      if (!ctx->doorbell_base_addr) {
-         ctx->doorbell_base_addr = (void *)ROUND_DOWN_TO(
-             (uint64_t)vqueue_res->r.QueueDoorBell, getpagesize());
-      }
+        if (!node->doorbell_base_addr)
+        {
+            node->doorbell_base_addr = (void *)ROUND_DOWN_TO((uint64_t)vqueue_res->r.QueueDoorBell, 
+               getpagesize());
+        }
 
       doorbell_offset =
-          vqueue_res->r.QueueDoorBell - (uint64_t)ctx->doorbell_base_addr;
+          vqueue_res->r.QueueDoorBell - (uint64_t)node->doorbell_base_addr;
 
       vqueue_res->host_doorbell = (HSAuint64)vqueue_res->r.Queue_DoorBell_aql;
       vqueue_res->host_doorbell_offset = doorbell_offset;
 
       vhsa_log("[QUEUE] Doorbell: addr: %p offset: %lx doorbell_base_addr: %p",
                (void *)vqueue_res->r.Queue_DoorBell, doorbell_offset,
-               ctx->doorbell_base_addr);
+               node->doorbell_base_addr);
 
       if (vqueue_res->r.Queue_DoorBell == NULL) {
          rsp->ret = HSAKMT_STATUS_ERROR;
@@ -1229,7 +1338,7 @@ QueueSizeInBytes: %lx Event: %p QueueResource: %p QueueId :%lx QueueId_ptr: %p r
 
       if (req->doorbell_blob_id) {
          struct vhsakmt_object *obj = vhsakmt_object_create(
-             (void *)ctx->doorbell_base_addr, 0, vhsakmt_doorbell_page_size(),
+             (void *)node->doorbell_base_addr, 0, vhsakmt_doorbell_page_size(),
              VHSAKMT_OBJ_DOORBELL_PTR);
          vhsakmt_context_object_set_blob_id(ctx, obj, req->doorbell_blob_id);
       }
@@ -1387,9 +1496,10 @@ static int vhsakmt_device_submit_fence(struct virgl_context *vctx,
    return 0;
 }
 
-static int vhsakmt_vm_init(struct vhsa_backend *b)
+static int vhsakmt_vm_init(struct vhsakmt_backend *b)
 {
    uint64_t vm_base_addr;
+   uint32_t i;
 
    if (b->vamgr_vm_base_addr_type == VHSA_VAMGR_VM_TYPE_FIXED_BASE) {
       if (b->vamgr_vm_fixed_base_addr == 0) {
@@ -1429,15 +1539,15 @@ static int vhsakmt_vm_init(struct vhsa_backend *b)
            vm_base_addr, b->vamgr_vm_kfd_size);
 
    /* set expected doorbell address */
-   if (backend.vamgr_vm_base_addr_type == VHSA_VAMGR_VM_TYPE_FIXED_BASE)
-      backend.expected_doorbell_base_addr = backend.vamgr_vm_fixed_base_addr;
+   if (vhsakmt_backend()->vamgr_vm_base_addr_type == VHSA_VAMGR_VM_TYPE_FIXED_BASE)
+      vhsakmt_backend()->expected_doorbell_base_addr = vhsakmt_backend()->vamgr_vm_fixed_base_addr;
    else
-      backend.expected_doorbell_base_addr =
+      vhsakmt_backend()->expected_doorbell_base_addr =
           (vm_base_addr + b->vamgr_vm_kfd_size + b->vamgr_vm_scratch_size);
 
-   if (hsaKmtSetDoorbellAddr((void *)backend.expected_doorbell_base_addr))
+   if (hsaKmtSetDoorbellAddr((void *)vhsakmt_backend()->expected_doorbell_base_addr))
       fprintf(stderr, "Set expected doorbell address: 0x%lx failed.\n",
-              backend.expected_doorbell_base_addr);
+              vhsakmt_backend()->expected_doorbell_base_addr);
 #endif
 
    if (vhsakmt_init_vamgr(&b->vamgr, vm_base_addr, b->vamgr_vm_kfd_size)) {
@@ -1445,14 +1555,70 @@ static int vhsakmt_vm_init(struct vhsa_backend *b)
       return -ENOMEM;
    }
 
-   if (vhsakmt_init_vamgr(&b->scratch_vamgr,
-                          vm_base_addr + b->vamgr_vm_kfd_size,
-                          b->vamgr_vm_scratch_size)) {
-      fprintf(stderr, "Init scratch vamgr failed");
-      return -ENOMEM;
+   vm_base_addr += b->vamgr_vm_kfd_size;
+
+   for (i = 0; i < b->vhsakmt_num_nodes; i++) {
+      if (b->vhsakmt_nodes[i].node_props.KFDGpuID) {
+         printf("Init scratch vamgr for node[%d]: [%lx-%lx]-%lx\n", i, vm_base_addr, vm_base_addr + b->vamgr_vm_scratch_size, b->vamgr_vm_scratch_size);
+         if (vhsakmt_init_vamgr(&b->vhsakmt_nodes[i].scratch_vamgr, vm_base_addr,
+                                 b->vamgr_vm_scratch_size)) {
+               fprintf(stderr, "Init scratch vamgr failed");
+               return -ENOMEM;
+         }
+
+         b->vhsakmt_nodes[i].scratch_vamgr.vm_va_base_addr = vm_base_addr;
+         vm_base_addr += b->vamgr_vm_scratch_size;
+
+      }
    }
 
    return 0;
+}
+
+static int vhsakmt_device_get_nodes_properties(struct vhsakmt_backend *b)
+{
+    int ret;
+    uint32_t i;
+    struct vhsakmt_node *node;
+
+    ret = hsaKmtAcquireSystemProperties(&b->sys_props);
+    if (ret)
+    {
+        fprintf(stderr, "Acquire system properties failed.\n");
+        return ret;
+    }
+
+    if (b->sys_props.NumNodes == 0)
+    {
+        fprintf(stderr, "No nodes found.\n");
+        return -EINVAL;
+    }
+    
+    b->vhsakmt_num_nodes = b->sys_props.NumNodes;
+    printf("Found %d nodes.\n", b->vhsakmt_num_nodes);
+
+    b->vhsakmt_nodes = calloc(b->vhsakmt_num_nodes, sizeof(struct vhsakmt_node));
+
+    for (i = 0; i < b->vhsakmt_num_nodes; i++)
+    {
+        node = vhsakmt_get_node(b, i);
+        if (!node)
+        {
+            fprintf(stderr, "Get node %d failed.\n", i);
+            return -EINVAL;
+        }
+        ret = hsaKmtGetNodeProperties(i, &node->node_props);
+        printf("Node[%d] KFDGPUID: %d.\n", i, node->node_props.KFDGpuID);
+        if (ret)
+        {
+            fprintf(stderr, "Get node %d properties failed.\n", i);
+            return ret;
+        }
+        if (node->node_props.KFDGpuID)
+            b->vhsakmt_gpu_count += 1;
+    }
+
+    return 0;
 }
 
 int vhsakmt_device_init(void)
@@ -1470,12 +1636,18 @@ int vhsakmt_device_init(void)
    ret = hsaKmtGetVersion(&info);
    if (ret) {
       fprintf(stderr, "Get KFD version failed.\n");
-      backend.hsakmt_capset.version_major = 1;
-      backend.hsakmt_capset.version_minor = 0;
+      vhsakmt_backend()->hsakmt_capset.version_major = 1;
+      vhsakmt_backend()->hsakmt_capset.version_minor = 0;
    } else {
-      backend.hsakmt_capset.version_major = info.KernelInterfaceMajorVersion;
-      backend.hsakmt_capset.version_minor = info.KernelInterfaceMinorVersion;
+      vhsakmt_backend()->hsakmt_capset.version_major = info.KernelInterfaceMajorVersion;
+      vhsakmt_backend()->hsakmt_capset.version_minor = info.KernelInterfaceMinorVersion;
    }
+
+    ret = vhsakmt_device_get_nodes_properties(&backend);
+    if (ret) {
+        fprintf(stderr, "Init nodes failed.\n");
+        return ret;
+    }
 
    ret = vhsakmt_vm_init(&backend);
    if (ret) {
@@ -1487,22 +1659,33 @@ int vhsakmt_device_init(void)
    if (d)
       dump_va = atoi(d);
 
-   hsakmt_set_dump_va(&backend.vamgr, dump_va);
-   hsakmt_set_dump_va(&backend.scratch_vamgr, dump_va);
+   hsakmt_set_dump_va(&vhsakmt_backend()->vamgr, dump_va);
 
    return 0;
+}
+
+static void vhsakmt_device_destroy_vamgr(struct vhsakmt_backend *b)
+{
+    uint32_t i;
+
+    for (i = 0; i < b->vhsakmt_num_nodes; i++)
+    {
+        if (vhsakmt_is_gpu_node(&b->vhsakmt_nodes[i]))
+            vhsakmt_destroy_vamgr(&b->vhsakmt_nodes[i].scratch_vamgr);
+    }
 }
 
 void vhsakmt_device_fini(void)
 {
 #ifdef HSAKMT_VIRTIO
-   vhsakmt_dereserve_va(backend.vamgr.vm_va_base_addr,
-                        backend.vamgr.reserve_size +
-                            backend.scratch_vamgr.reserve_size);
+   vhsakmt_dereserve_va(vhsakmt_backend()->vamgr.vm_va_base_addr,
+                        vhsakmt_backend()->vamgr.reserve_size +
+                            vhsakmt_backend()->scratch_vamgr.reserve_size);
 #endif
 
-   vhsakmt_destroy_vamgr(&backend.vamgr);
-   vhsakmt_destroy_vamgr(&backend.scratch_vamgr);
+   vhsakmt_destroy_vamgr(&vhsakmt_backend()->vamgr);
+   // vhsakmt_destroy_vamgr(&vhsakmt_backend()->scratch_vamgr);
+   vhsakmt_device_destroy_vamgr(vhsakmt_backend());
 
    hsaKmtReleaseSystemProperties();
    hsaKmtCloseKFD();
@@ -1515,7 +1698,7 @@ size_t vhsakmt_get_capset(UNUSED uint32_t set, UNUSED void *caps)
    struct virgl_renderer_capset_hsakmt *c = caps;
 
    if (c)
-      *c = backend.hsakmt_capset;
+      *c = vhsakmt_backend()->hsakmt_capset;
 
    return sizeof(*c);
 }
@@ -1542,7 +1725,7 @@ struct virgl_context *hsakmt_device_create(UNUSED size_t debug_len,
       ctx->debug = atoi(d);
 
    va_start_addr =
-       hsakmt_alloc_from_vamgr(&backend.vamgr, VHSA_CTX_RESERVE_SIZE);
+       hsakmt_alloc_from_vamgr(&vhsakmt_backend()->vamgr, VHSA_CTX_RESERVE_SIZE);
    if (!va_start_addr) {
       fprintf(stderr, "Can not alloc from vamgr size: %lx",
               VHSA_CTX_RESERVE_SIZE);
@@ -1554,21 +1737,23 @@ struct virgl_context *hsakmt_device_create(UNUSED size_t debug_len,
       return NULL;
    }
 
+/*
    vhsa_log("vhsakmt device init success.\n\
 device name: %s \n\
 VM base type: %s \n\
 kfd VM: [0x%lx-0x%lx]-0x%lx \n\
 scratch VM: [0x%lx-0x%lx]-0x%lx \n\
 expected doorbell: 0x%lx",
-            backend.name,
-            backend.vamgr_vm_base_addr_type == VHSA_VAMGR_VM_TYPE_FIXED_BASE
+            vhsakmt_backend()->name,
+            vhsakmt_backend()->vamgr_vm_base_addr_type == VHSA_VAMGR_VM_TYPE_FIXED_BASE
                 ? "VHSA_VAMGR_VM_TYPE_FIXED_BASE"
                 : "VHSA_VAMGR_VM_TYPE_HEAP_INTERVAL_BASE",
-            backend.vamgr.vm_va_base_addr, backend.vamgr.vm_va_high_addr,
-            backend.vamgr.reserve_size, backend.scratch_vamgr.vm_va_base_addr,
-            backend.scratch_vamgr.vm_va_high_addr,
-            backend.scratch_vamgr.reserve_size,
-            backend.expected_doorbell_base_addr);
+            vhsakmt_backend()->vamgr.vm_va_base_addr, vhsakmt_backend()->vamgr.vm_va_high_addr,
+            vhsakmt_backend()->vamgr.reserve_size, vhsakmt_backend()->scratch_vamgr.vm_va_base_addr,
+            vhsakmt_backend()->scratch_vamgr.vm_va_high_addr,
+            vhsakmt_backend()->scratch_vamgr.reserve_size,
+            vhsakmt_backend()->expected_doorbell_base_addr);
+*/
 
    vhsa_log("vhsakmt vamgr:\nvm base addr: 0x%lx \nvm reserve size: 0x%lx",
             ctx->vamgr.vm_va_base_addr, ctx->vamgr.reserve_size);
