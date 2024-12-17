@@ -70,7 +70,7 @@ inc_gallium = include_directories('include', 'auxiliary', 'auxiliary/util')
 
 u_format_table_c = custom_target(
    'u_format_table.c',
-   input : ['auxiliary/util/u_format_table.py', 'auxiliary/util/u_format.csv'],
+   input : ['auxiliary/util/u_format_table.py', 'auxiliary/util/u_format.yml'],
    output : 'u_format_table.c',
    command : [prog_python, '-B', '@INPUT@'],
    depend_files : files('auxiliary/util/u_format_parse.py'),
