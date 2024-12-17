@@ -83,7 +83,17 @@ static struct vhsakmt_node *vhsakmt_get_node(struct vhsakmt_backend *b,
    return &b->vhsakmt_nodes[node_id];
 }
 
-static inline uint64_t vhsakmt_doorbell_page_size() { return 0x2000; }
+static inline uint32_t hsakmt_get_gfx_version_full(HSA_ENGINE_ID id)
+{
+   return (id.ui32.Major << 16) | (id.ui32.Minor << 8) | id.ui32.Stepping;
+}
+
+/* From libhsakmt src/queue.c */
+static inline uint64_t vhsakmt_doorbell_page_size(uint32_t gfxv)
+{
+   return (gfxv > 0x90000) ? (8 * 1024) : (4 * 1024);
+}
+
 static inline uint64_t vhsakmt_queue_page_size() { return getpagesize(); }
 
 static int init_amdgpu_drm(amdgpu_device_handle *dev_handle)
@@ -1338,7 +1348,7 @@ QueueSizeInBytes: %lx Event: %p QueueResource: %p QueueId :%lx QueueId_ptr: %p r
 
       if (req->doorbell_blob_id) {
          struct vhsakmt_object *obj = vhsakmt_object_create(
-             (void *)node->doorbell_base_addr, 0, vhsakmt_doorbell_page_size(),
+             (void *)node->doorbell_base_addr, 0, vhsakmt_doorbell_page_size(hsakmt_get_gfx_version_full(node->node_props.EngineId)),
              VHSAKMT_OBJ_DOORBELL_PTR);
          vhsakmt_context_object_set_blob_id(ctx, obj, req->doorbell_blob_id);
       }
