@@ -69,12 +69,16 @@ static struct vhsakmt_backend backend = {
 
 static inline struct vhsakmt_backend *vhsakmt_backend(void) { return &backend; }
 
-static inline bool vhsakmt_is_gpu_node(struct vhsakmt_node *n)
+static inline uint64_t vhsakmt_queue_page_size() { return getpagesize(); }
+
+static inline bool
+vhsakmt_is_gpu_node(struct vhsakmt_node *n)
 {
    return n->node_props.KFDGpuID != 0;
 }
 
-static struct vhsakmt_node *vhsakmt_get_node(struct vhsakmt_backend *b,
+static struct vhsakmt_node *
+vhsakmt_get_node(struct vhsakmt_backend *b,
                                              uint32_t node_id)
 {
    if (!b->vhsakmt_num_nodes || node_id >= b->vhsakmt_num_nodes)
@@ -83,20 +87,21 @@ static struct vhsakmt_node *vhsakmt_get_node(struct vhsakmt_backend *b,
    return &b->vhsakmt_nodes[node_id];
 }
 
-static inline uint32_t hsakmt_get_gfx_version_full(HSA_ENGINE_ID id)
+static inline uint32_t
+hsakmt_get_gfx_version_full(HSA_ENGINE_ID id)
 {
    return (id.ui32.Major << 16) | (id.ui32.Minor << 8) | id.ui32.Stepping;
 }
 
 /* From libhsakmt src/queue.c */
-static inline uint64_t vhsakmt_doorbell_page_size(uint32_t gfxv)
+static inline uint64_t
+vhsakmt_doorbell_page_size(uint32_t gfxv)
 {
    return (gfxv > 0x90000) ? (8 * 1024) : (4 * 1024);
 }
 
-static inline uint64_t vhsakmt_queue_page_size() { return getpagesize(); }
-
-static int init_amdgpu_drm(amdgpu_device_handle *dev_handle)
+static int
+init_amdgpu_drm(amdgpu_device_handle *dev_handle)
 {
    uint32_t drm_major, drm_minor;
    int r;
@@ -112,13 +117,15 @@ static int init_amdgpu_drm(amdgpu_device_handle *dev_handle)
    return fd;
 }
 
-static void deinit_amdgpu_drm(int fd, amdgpu_device_handle dev_handle)
+static void
+deinit_amdgpu_drm(int fd, amdgpu_device_handle dev_handle)
 {
    amdgpu_device_deinitialize(dev_handle);
    close(fd);
 }
 
-static struct vhsakmt_object *vhsakmt_object_create(HSAKMT_BO_HANDLE handle,
+static struct vhsakmt_object *
+vhsakmt_object_create(HSAKMT_BO_HANDLE handle,
                                                     uint32_t flags,
                                                     uint32_t size,
                                                     vhsakmt_object_type_t type)
@@ -135,13 +142,15 @@ static struct vhsakmt_object *vhsakmt_object_create(HSAKMT_BO_HANDLE handle,
    return obj;
 }
 
-static int vhsakmt_gpu_unmap(struct vhsakmt_object *obj)
+static int
+vhsakmt_gpu_unmap(struct vhsakmt_object *obj)
 {
    obj->gpu_mapped = false;
    return hsaKmtUnmapMemoryToGPU(obj->bo);
 }
 
-static int vhsakmt_free_userptr(UNUSED struct vhsakmt_object *obj)
+static int
+vhsakmt_free_userptr(UNUSED struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_USERPTR)
       return -EINVAL;
@@ -158,7 +167,8 @@ static int vhsakmt_free_userptr(UNUSED struct vhsakmt_object *obj)
    they are alloced in map to GPU, and need be free in here, otherwise map same
    scratch address will return error.
 */
-static int vhsakmt_free_scratch_map_mem(struct vhsakmt_context *ctx,
+static int
+vhsakmt_free_scratch_map_mem(struct vhsakmt_context *ctx,
                                         struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_SCRATCH_MAP_MEM)
@@ -188,7 +198,8 @@ vhsakmt_free_scratch_reserve_mem(struct vhsakmt_context *ctx, struct vhsakmt_obj
     return 0;
 }
 
-static inline bool vhsakmt_is_scratch_obj(struct vhsakmt_object *obj)
+static inline bool
+vhsakmt_is_scratch_obj(struct vhsakmt_object *obj)
 {
    if (!obj)
       return false;
@@ -196,7 +207,8 @@ static inline bool vhsakmt_is_scratch_obj(struct vhsakmt_object *obj)
    return ((HsaMemFlags *)&obj->flags)->ui32.Scratch;
 }
 
-static int vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
+static int
+vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
                                  struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_HOST_MEM)
@@ -239,7 +251,8 @@ static int vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
    return 0;
 }
 
-static int vhsakmt_free_event_obj(struct vhsakmt_context *ctx,
+static int
+vhsakmt_free_event_obj(struct vhsakmt_context *ctx,
                                   struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_EVENT)
@@ -254,7 +267,8 @@ static int vhsakmt_free_event_obj(struct vhsakmt_context *ctx,
    return r;
 }
 
-static void vhsakmt_free_aql_rw_mem_obj(struct vhsakmt_context *ctx,
+static void
+vhsakmt_free_aql_rw_mem_obj(struct vhsakmt_context *ctx,
                                         struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR)
@@ -267,7 +281,8 @@ static void vhsakmt_free_aql_rw_mem_obj(struct vhsakmt_context *ctx,
    hsakmt_free_from_vamgr(&ctx->vamgr, (uint64_t)obj->bo);
 }
 
-static bool vhsakmt_aql_rw_mem_can_remove(struct vhsakmt_object *obj)
+static bool
+vhsakmt_aql_rw_mem_can_remove(struct vhsakmt_object *obj)
 {
    if (obj->type != VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR)
       return false;
@@ -277,7 +292,8 @@ static bool vhsakmt_aql_rw_mem_can_remove(struct vhsakmt_object *obj)
    return (obj->aql_queue == NULL) && obj->guest_removed;
 }
 
-static void vhsakmt_free_queue_obj(struct vhsakmt_context *ctx,
+static void
+vhsakmt_free_queue_obj(struct vhsakmt_context *ctx,
                                    struct vhsakmt_object *obj)
 {
    uint64_t r = hsaKmtDestroyQueue(obj->queue->r.QueueId);
@@ -296,7 +312,8 @@ static void vhsakmt_free_queue_obj(struct vhsakmt_context *ctx,
    obj->queue = NULL;
 }
 
-static void vhsakmt_free_dmabuf_obj(struct vhsakmt_context *ctx,
+static void
+vhsakmt_free_dmabuf_obj(struct vhsakmt_context *ctx,
                                     struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_DMA_BUF)
@@ -313,7 +330,8 @@ static void vhsakmt_free_dmabuf_obj(struct vhsakmt_context *ctx,
    }
 }
 
-static void vhsakmt_free_object(struct vhsakmt_base_context *bctx,
+static void
+vhsakmt_free_object(struct vhsakmt_base_context *bctx,
                                 struct vhsakmt_base_object *bobj)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
@@ -377,7 +395,8 @@ static void vhsakmt_free_object(struct vhsakmt_base_context *bctx,
    free(obj);
 }
 
-static void vhsakmt_device_destroy(struct virgl_context *vctx)
+static void
+vhsakmt_device_destroy(struct virgl_context *vctx)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(to_drm_context(vctx));
    uint32_t i;
@@ -399,7 +418,8 @@ static void vhsakmt_device_destroy(struct virgl_context *vctx)
    free(ctx);
 }
 
-static void vhsakmt_device_attach_resource(struct virgl_context *vctx,
+static void
+vhsakmt_device_attach_resource(struct virgl_context *vctx,
                                            struct virgl_resource *res)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(to_drm_context(vctx));
@@ -447,7 +467,8 @@ vhsakmt_device_export_opaque_handle(UNUSED struct virgl_context *vctx,
    return -EPERM;
 }
 
-static int vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id,
+static int
+vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id,
                                    uint64_t blob_id, uint64_t blob_size,
                                    uint32_t blob_flags,
                                    struct virgl_context_blob *blob)
@@ -523,7 +544,8 @@ static int vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id,
    return 0;
 }
 
-static inline bool vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx,
+static inline bool
+vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx,
                                           UNUSED uint64_t value)
 {
 #ifdef VHSA_CHECK_VA_ENABLE
@@ -557,13 +579,15 @@ static inline bool vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx,
       } while (false)
 
 /* CMDS */
-static int vhsakmt_ccmd_nop(UNUSED struct vhsakmt_base_context *bctx,
+static int
+vhsakmt_ccmd_nop(UNUSED struct vhsakmt_base_context *bctx,
                             UNUSED struct vhsakmt_ccmd_req *hdr)
 {
    return 0;
 }
 
-static int vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
+static int
+vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
                                    struct vhsakmt_ccmd_req *hdr)
 {
    const struct vhsakmt_ccmd_query_info_req *req =
@@ -863,7 +887,8 @@ static int vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
    return 0;
 }
 
-static int vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx,
+static int
+vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx,
                               struct vhsakmt_ccmd_req *hdr)
 {
    struct vhsakmt_ccmd_event_req *req = to_vhsakmt_ccmd_event_req(hdr);
@@ -1040,7 +1065,8 @@ vhsakmt_alloc_scratch_memory(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_me
     return 0;
 }
 
-static int vhsakmt_alloc_memory(struct vhsakmt_context *ctx,
+static int
+vhsakmt_alloc_memory(struct vhsakmt_context *ctx,
                                 struct vhsakmt_ccmd_memory_req *req,
                                 void **MemoryAddress)
 {
@@ -1110,7 +1136,8 @@ alloc_failed:
    return ret;
 }
 
-static int vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx,
+static int
+vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx,
                                struct vhsakmt_ccmd_req *hdr)
 {
    struct vhsakmt_ccmd_memory_req *req = to_vhsakmt_ccmd_memory_req(hdr);
@@ -1245,7 +1272,8 @@ static int vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx,
    return 0;
 }
 
-static int vhsakmt_ccmd_queue(struct vhsakmt_base_context *bctx,
+static int
+vhsakmt_ccmd_queue(struct vhsakmt_base_context *bctx,
                               struct vhsakmt_ccmd_req *hdr)
 {
    const struct vhsakmt_ccmd_queue_req *req = to_vhsakmt_ccmd_queue_req(hdr);
@@ -1403,7 +1431,8 @@ QueueSizeInBytes: %lx Event: %p QueueResource: %p QueueId :%lx QueueId_ptr: %p r
    return 0;
 }
 
-static int vhsakmt_ccmd_gl_inter(struct vhsakmt_base_context *bctx,
+static int
+vhsakmt_ccmd_gl_inter(struct vhsakmt_base_context *bctx,
                                  struct vhsakmt_ccmd_req *hdr)
 {
    const struct vhsakmt_ccmd_gl_inter_req *req =
@@ -1466,7 +1495,8 @@ static const struct vhsakmt_ccmd ccmd_dispatch[] = {
     HSAHANDLER(EVENT, event), HSAHANDLER(MEMORY, memory),
     HSAHANDLER(QUEUE, queue), HSAHANDLER(GL_INTER, gl_inter)};
 
-static int vhsakmt_device_submit_fence(struct virgl_context *vctx,
+static int
+vhsakmt_device_submit_fence(struct virgl_context *vctx,
                                        uint32_t flags, uint32_t ring_idx,
                                        uint64_t fence_id)
 {
@@ -1487,7 +1517,8 @@ static int vhsakmt_device_submit_fence(struct virgl_context *vctx,
    return 0;
 }
 
-static int vhsakmt_vm_init(struct vhsakmt_backend *b)
+static int
+vhsakmt_vm_init(struct vhsakmt_backend *b)
 {
    uint64_t vm_base_addr;
    uint32_t i;
@@ -1566,7 +1597,8 @@ static int vhsakmt_vm_init(struct vhsakmt_backend *b)
    return 0;
 }
 
-static int vhsakmt_device_get_nodes_properties(struct vhsakmt_backend *b)
+static int
+vhsakmt_device_get_nodes_properties(struct vhsakmt_backend *b)
 {
     int ret;
     uint32_t i;
@@ -1612,7 +1644,8 @@ static int vhsakmt_device_get_nodes_properties(struct vhsakmt_backend *b)
     return 0;
 }
 
-int vhsakmt_device_init(void)
+int
+vhsakmt_device_init(void)
 {
    int dump_va = 0;
    int ret;
@@ -1655,7 +1688,8 @@ int vhsakmt_device_init(void)
    return 0;
 }
 
-static void vhsakmt_device_destroy_vamgr(struct vhsakmt_backend *b)
+static void
+vhsakmt_device_destroy_vamgr(struct vhsakmt_backend *b)
 {
     uint32_t i;
 
@@ -1666,7 +1700,8 @@ static void vhsakmt_device_destroy_vamgr(struct vhsakmt_backend *b)
     }
 }
 
-void vhsakmt_device_fini(void)
+void
+vhsakmt_device_fini(void)
 {
 #ifdef HSAKMT_VIRTIO
    vhsakmt_dereserve_va(vhsakmt_backend()->vamgr.vm_va_base_addr,
@@ -1684,7 +1719,8 @@ void vhsakmt_device_fini(void)
 
 void vhsakmt_device_reset(void) {}
 
-size_t vhsakmt_get_capset(UNUSED uint32_t set, UNUSED void *caps)
+size_t
+vhsakmt_get_capset(UNUSED uint32_t set, UNUSED void *caps)
 {
    struct virgl_renderer_capset_hsakmt *c = caps;
 
@@ -1694,7 +1730,8 @@ size_t vhsakmt_get_capset(UNUSED uint32_t set, UNUSED void *caps)
    return sizeof(*c);
 }
 
-struct virgl_context *hsakmt_device_create(UNUSED size_t debug_len,
+struct virgl_context *
+hsakmt_device_create(UNUSED size_t debug_len,
                                            UNUSED const char *debug_name)
 {
    struct vhsakmt_context *ctx;
