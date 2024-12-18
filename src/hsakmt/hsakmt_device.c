@@ -78,8 +78,7 @@ vhsakmt_is_gpu_node(struct vhsakmt_node *n)
 }
 
 static struct vhsakmt_node *
-vhsakmt_get_node(struct vhsakmt_backend *b,
-                                             uint32_t node_id)
+vhsakmt_get_node(struct vhsakmt_backend *b, uint32_t node_id)
 {
    if (!b->vhsakmt_num_nodes || node_id >= b->vhsakmt_num_nodes)
       return NULL;
@@ -125,10 +124,8 @@ deinit_amdgpu_drm(int fd, amdgpu_device_handle dev_handle)
 }
 
 static struct vhsakmt_object *
-vhsakmt_object_create(HSAKMT_BO_HANDLE handle,
-                                                    uint32_t flags,
-                                                    uint32_t size,
-                                                    vhsakmt_object_type_t type)
+vhsakmt_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t size,
+                      vhsakmt_object_type_t type)
 {
    struct vhsakmt_object *obj = calloc(1, sizeof(*obj));
    if (!obj)
@@ -168,8 +165,7 @@ vhsakmt_free_userptr(UNUSED struct vhsakmt_object *obj)
    scratch address will return error.
 */
 static int
-vhsakmt_free_scratch_map_mem(struct vhsakmt_context *ctx,
-                                        struct vhsakmt_object *obj)
+vhsakmt_free_scratch_map_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_SCRATCH_MAP_MEM)
       return -EINVAL;
@@ -208,8 +204,7 @@ vhsakmt_is_scratch_obj(struct vhsakmt_object *obj)
 }
 
 static int
-vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
-                                 struct vhsakmt_object *obj)
+vhsakmt_free_host_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_HOST_MEM)
       return -EINVAL;
@@ -251,19 +246,17 @@ vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
 }
 
 static void
-vhsakmt_free_event_obj(struct vhsakmt_context *ctx,
-                                  struct vhsakmt_object *obj)
+vhsakmt_free_event_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_EVENT)
-      return -EINVAL;
+      return;
 
    hsaKmtSetEvent(obj->bo);
    hsaKmtDestroyEvent(obj->bo);
 }
 
 static void
-vhsakmt_free_aql_rw_mem_obj(struct vhsakmt_context *ctx,
-                                        struct vhsakmt_object *obj)
+vhsakmt_free_aql_rw_mem_obj(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR)
       return;
@@ -287,8 +280,7 @@ vhsakmt_aql_rw_mem_can_remove(struct vhsakmt_object *obj)
 }
 
 static void
-vhsakmt_free_queue_obj(struct vhsakmt_context *ctx,
-                                   struct vhsakmt_object *obj)
+vhsakmt_free_queue_obj(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    uint64_t r = hsaKmtDestroyQueue(obj->queue->r.QueueId);
    vhsa_dbg("free queue %lx, ret = %ld", obj->queue->r.QueueId, r);
@@ -307,8 +299,7 @@ vhsakmt_free_queue_obj(struct vhsakmt_context *ctx,
 }
 
 static void
-vhsakmt_free_dmabuf_obj(struct vhsakmt_context *ctx,
-                                    struct vhsakmt_object *obj)
+vhsakmt_free_dmabuf_obj(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_DMA_BUF)
       return;
@@ -325,8 +316,7 @@ vhsakmt_free_dmabuf_obj(struct vhsakmt_context *ctx,
 }
 
 static void
-vhsakmt_free_object(struct vhsakmt_base_context *bctx,
-                                struct vhsakmt_base_object *bobj)
+vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
    struct vhsakmt_object *obj = to_vhsakmt_object(bobj);
@@ -413,8 +403,7 @@ vhsakmt_device_destroy(struct virgl_context *vctx)
 }
 
 static void
-vhsakmt_device_attach_resource(struct virgl_context *vctx,
-                                           struct virgl_resource *res)
+vhsakmt_device_attach_resource(struct virgl_context *vctx, struct virgl_resource *res)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(to_drm_context(vctx));
    struct vhsakmt_object *obj =
@@ -453,8 +442,7 @@ vhsakmt_device_attach_resource(struct virgl_context *vctx,
 
 static enum virgl_resource_fd_type
 vhsakmt_device_export_opaque_handle(UNUSED struct virgl_context *vctx,
-                                    UNUSED struct virgl_resource *res,
-                                    UNUSED int *out_fd)
+                                    UNUSED struct virgl_resource *res, UNUSED int *out_fd)
 {
    /* not support currently */
 
@@ -462,10 +450,9 @@ vhsakmt_device_export_opaque_handle(UNUSED struct virgl_context *vctx,
 }
 
 static int
-vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id,
-                                   uint64_t blob_id, uint64_t blob_size,
-                                   uint32_t blob_flags,
-                                   struct virgl_context_blob *blob)
+vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id, uint64_t blob_id,
+                        uint64_t blob_size, uint32_t blob_flags,
+                        struct virgl_context_blob *blob)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(to_drm_context(vctx));
 
@@ -539,8 +526,7 @@ vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id,
 }
 
 static inline bool
-vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx,
-                                          UNUSED uint64_t value)
+vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx, UNUSED uint64_t value)
 {
 #ifdef VHSA_CHECK_VA_ENABLE
    if (!ctx->vamgr.vm_va_base_addr || !ctx->vamgr.vm_va_high_addr)
@@ -575,14 +561,13 @@ vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx,
 /* CMDS */
 static int
 vhsakmt_ccmd_nop(UNUSED struct vhsakmt_base_context *bctx,
-                            UNUSED struct vhsakmt_ccmd_req *hdr)
+                 UNUSED struct vhsakmt_ccmd_req *hdr)
 {
    return 0;
 }
 
 static int
-vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
-                                   struct vhsakmt_ccmd_req *hdr)
+vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)
 {
    const struct vhsakmt_ccmd_query_info_req *req =
        to_vhsakmt_ccmd_query_info_req(hdr);
@@ -882,8 +867,7 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx,
 }
 
 static int
-vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx,
-                              struct vhsakmt_ccmd_req *hdr)
+vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)
 {
    struct vhsakmt_ccmd_event_req *req = to_vhsakmt_ccmd_event_req(hdr);
    struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
@@ -987,35 +971,34 @@ vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx,
 }
 
 static int
-vhsakmt_scratch_area_init(struct vhsakmt_context *ctx, struct vhsakmt_node *node, struct vhsakmt_ccmd_memory_req *req, struct vhsakmt_backend *b)
+vhsakmt_scratch_area_init(struct vhsakmt_context *ctx, struct vhsakmt_node *node,
+                          struct vhsakmt_ccmd_memory_req *req, struct vhsakmt_backend *b)
 {
-    int ret = 0;
-    void *mem;
+   int ret = 0;
+   void *mem;
 
-    pthread_mutex_lock(&b->hsakmt_mutex);
+   pthread_mutex_lock(&b->hsakmt_mutex);
 
-    if (node->scratch_base)
-    {
-        ret = 0;
-        goto out;
-    }
+   if (node->scratch_base) {
+      ret = 0;
+      goto out;
+   }
 
-    mem = (void*)node->scratch_vamgr.vm_va_base_addr;
+   mem = (void *)node->scratch_vamgr.vm_va_base_addr;
 
-    ret = hsaKmtAllocMemory(req->alloc_args.PreferredNode,
-                            node->scratch_vamgr.reserve_size,
-                            req->alloc_args.MemFlags,
-                            &mem);
-    vhsa_log("alloc scratch target: %p -> out: %p size: %lx ret: %d", mem, (void*)node->scratch_vamgr.vm_va_base_addr,
-        node->scratch_vamgr.reserve_size, ret);
-    if (ret || (node->scratch_vamgr.vm_va_base_addr != (uint64_t)mem))
-    {
-        vhsa_err("vhsakmt_alloc_memory failed: %d (%s)", ret, strerror(errno));
-        goto out;
-    }
-    node->scratch_base = (void*)node->scratch_vamgr.vm_va_base_addr;
-    pthread_mutex_unlock(&b->hsakmt_mutex);
-    return 0;
+   ret =
+       hsaKmtAllocMemory(req->alloc_args.PreferredNode, node->scratch_vamgr.reserve_size,
+                         req->alloc_args.MemFlags, &mem);
+   vhsa_log("alloc scratch target: %p -> out: %p size: %lx ret: %d", mem,
+            (void *)node->scratch_vamgr.vm_va_base_addr, node->scratch_vamgr.reserve_size,
+            ret);
+   if (ret || (node->scratch_vamgr.vm_va_base_addr != (uint64_t)mem)) {
+      vhsa_err("vhsakmt_alloc_memory failed: %d (%s)", ret, strerror(errno));
+      goto out;
+   }
+   node->scratch_base = (void *)node->scratch_vamgr.vm_va_base_addr;
+   pthread_mutex_unlock(&b->hsakmt_mutex);
+   return 0;
 
 out:
     pthread_mutex_unlock(&b->hsakmt_mutex);
@@ -1023,46 +1006,44 @@ out:
 }
 
 static int
-vhsakmt_alloc_scratch_memory(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_memory_req *req, void **MemoryAddress)
+vhsakmt_alloc_scratch_memory(struct vhsakmt_context *ctx,
+                             struct vhsakmt_ccmd_memory_req *req, void **MemoryAddress)
 {
-    void *mem;
-    int ret = 0;
+   void *mem;
+   int ret = 0;
 
-    struct vhsakmt_node *node = vhsakmt_get_node(vhsakmt_backend(), req->alloc_args.PreferredNode);
-    if (!node)
-    {
-        vhsa_err("Invalid node %d", req->alloc_args.PreferredNode);
-        return HSAKMT_STATUS_INVALID_NODE_UNIT;
-    }
+   struct vhsakmt_node *node =
+       vhsakmt_get_node(vhsakmt_backend(), req->alloc_args.PreferredNode);
+   if (!node) {
+      vhsa_err("Invalid node %d", req->alloc_args.PreferredNode);
+      return HSAKMT_STATUS_INVALID_NODE_UNIT;
+   }
 
-    /* lazy init */
-    if (!node->scratch_base)
-    {
-        ret = vhsakmt_scratch_area_init(ctx, node, req, vhsakmt_backend());
-        if (ret)
-        {
-            vhsa_err("vhsakmt_scratch_area_init failed: %d (%s)", ret, strerror(errno));
-            return -ENOMEM;
-        }
-    }
+   /* lazy init */
+   if (!node->scratch_base) {
+      ret = vhsakmt_scratch_area_init(ctx, node, req, vhsakmt_backend());
+      if (ret) {
+         vhsa_err("vhsakmt_scratch_area_init failed: %d (%s)", ret, strerror(errno));
+         return -ENOMEM;
+      }
+   }
 
-    mem = (void *)hsakmt_alloc_from_vamgr(&node->scratch_vamgr, req->alloc_args.SizeInBytes);
-    if (!mem)
-    {
-        vhsa_err("Can not alloc from vamgr size: %lx", req->alloc_args.SizeInBytes);
-        return -ENOMEM;
-    }
+   mem =
+       (void *)hsakmt_alloc_from_vamgr(&node->scratch_vamgr, req->alloc_args.SizeInBytes);
+   if (!mem) {
+      vhsa_err("Can not alloc from vamgr size: %lx", req->alloc_args.SizeInBytes);
+      return -ENOMEM;
+   }
 
-    printf("scratch alloc: %p size: %lx\n", mem, req->alloc_args.SizeInBytes);
+   printf("scratch alloc: %p size: %lx\n", mem, req->alloc_args.SizeInBytes);
 
-    *MemoryAddress = mem;
-    return 0;
+   *MemoryAddress = mem;
+   return 0;
 }
 
 static int
-vhsakmt_alloc_memory(struct vhsakmt_context *ctx,
-                                struct vhsakmt_ccmd_memory_req *req,
-                                void **MemoryAddress)
+vhsakmt_alloc_memory(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_memory_req *req,
+                     void **MemoryAddress)
 {
    int ret = 0;
    struct vhsakmt_object *obj;
@@ -1131,8 +1112,7 @@ alloc_failed:
 }
 
 static int
-vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx,
-                               struct vhsakmt_ccmd_req *hdr)
+vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)
 {
    struct vhsakmt_ccmd_memory_req *req = to_vhsakmt_ccmd_memory_req(hdr);
    struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
@@ -1267,8 +1247,7 @@ vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx,
 }
 
 static int
-vhsakmt_ccmd_queue(struct vhsakmt_base_context *bctx,
-                              struct vhsakmt_ccmd_req *hdr)
+vhsakmt_ccmd_queue(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)
 {
    const struct vhsakmt_ccmd_queue_req *req = to_vhsakmt_ccmd_queue_req(hdr);
    struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
@@ -1426,8 +1405,7 @@ QueueSizeInBytes: %lx Event: %p QueueResource: %p QueueId :%lx QueueId_ptr: %p r
 }
 
 static int
-vhsakmt_ccmd_gl_inter(struct vhsakmt_base_context *bctx,
-                                 struct vhsakmt_ccmd_req *hdr)
+vhsakmt_ccmd_gl_inter(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)
 {
    const struct vhsakmt_ccmd_gl_inter_req *req =
        to_vhsakmt_ccmd_gl_inter_req(hdr);
@@ -1490,9 +1468,8 @@ static const struct vhsakmt_ccmd ccmd_dispatch[] = {
     HSAHANDLER(QUEUE, queue), HSAHANDLER(GL_INTER, gl_inter)};
 
 static int
-vhsakmt_device_submit_fence(struct virgl_context *vctx,
-                                       uint32_t flags, uint32_t ring_idx,
-                                       uint64_t fence_id)
+vhsakmt_device_submit_fence(struct virgl_context *vctx, uint32_t flags, uint32_t ring_idx,
+                            uint64_t fence_id)
 {
    (void)vctx;
    (void)flags;
@@ -1725,8 +1702,7 @@ vhsakmt_get_capset(UNUSED uint32_t set, UNUSED void *caps)
 }
 
 struct virgl_context *
-hsakmt_device_create(UNUSED size_t debug_len,
-                                           UNUSED const char *debug_name)
+hsakmt_device_create(UNUSED size_t debug_len, UNUSED const char *debug_name)
 {
    struct vhsakmt_context *ctx;
    uint64_t va_start_addr;
