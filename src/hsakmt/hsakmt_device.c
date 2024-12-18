@@ -141,23 +141,6 @@ static int vhsakmt_gpu_unmap(struct vhsakmt_object *obj)
    return hsaKmtUnmapMemoryToGPU(obj->bo);
 }
 
-static int vhsakmt_fd_unmap(struct vhsakmt_context *ctx,
-                            struct vhsakmt_object *obj)
-{
-   if (!obj->fd)
-      return 0;
-   int r = 0;
-
-   r = munmap(obj->bo, obj->base.size);
-
-   if (r)
-      vhsa_err("Unmap fd: %d res_id: %d size: %lx ret: %d", obj->fd,
-               obj->base.res_id, obj->base.size, r);
-
-   obj->bo = NULL;
-   return 0;
-}
-
 static int vhsakmt_free_userptr(UNUSED struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_USERPTR)
@@ -220,7 +203,12 @@ static int vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
       return -EINVAL;
 
    if (obj->fd && obj->base.blob_id == 0) {
-      vhsakmt_fd_unmap(ctx, obj);
+      if (obj->bo) {
+        munmap(obj->bo, obj->base.size);
+        obj->bo = NULL;
+        obj->base.size = 0;
+      }
+
       close(obj->fd);
       obj->fd = -1;
       return 0;
