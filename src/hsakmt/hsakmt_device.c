@@ -214,6 +214,7 @@ vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
    if (!obj || obj->type != VHSAKMT_OBJ_HOST_MEM)
       return -EINVAL;
 
+   /* For shmem */
    if (obj->fd && obj->base.blob_id == 0) {
       if (obj->bo) {
         munmap(obj->bo, obj->base.size);
@@ -226,24 +227,22 @@ vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
       return 0;
    }
 
-   if (!vhsakmt_is_scratch_obj(obj))
-      vhsakmt_gpu_unmap(obj);
-
-   vhsa_dbg("free hsakmt mem addr: %p", obj->bo);
+   vhsa_dbg("Free hsakmt host memory address: %p", obj->bo);
 
    if (vhsakmt_is_scratch_obj(obj))
       vhsakmt_free_scratch_reserve_mem(ctx, obj);
    else {
+      vhsakmt_gpu_unmap(obj);
       hsaKmtFreeMemory(obj->bo, obj->base.size);
 
 #ifdef HSAKMT_VIRTIO
       if (vhsakmt_reserve_va((uint64_t)obj->bo, obj->base.size))
-         vhsa_err("reserve va addr: %p size: 0x%x when free failed.", obj->bo,
+         vhsa_err("Reserve address: %p size: 0x%x failed when free.", obj->bo,
                   obj->base.size);
 #endif
 
       if (hsakmt_free_from_vamgr(&ctx->vamgr, (uint64_t)obj->bo)) {
-         vhsa_err("Failed to free mem form vamgr, addr: %p", obj->bo);
+         vhsa_err("Failed to free memory form vamgr, address: %p", obj->bo);
          return -EINVAL;
       }
    }
