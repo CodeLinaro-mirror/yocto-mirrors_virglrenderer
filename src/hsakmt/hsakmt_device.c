@@ -250,20 +250,15 @@ vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
    return 0;
 }
 
-static int
+static void
 vhsakmt_free_event_obj(struct vhsakmt_context *ctx,
                                   struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_EVENT)
       return -EINVAL;
 
-   uint64_t r = hsaKmtSetEvent(obj->bo);
-
-   r = hsaKmtDestroyEvent(obj->bo);
-   if (r)
-      vhsa_err("Free events: %p, ret: %ld", (void *)obj->bo, r);
-
-   return r;
+   hsaKmtSetEvent(obj->bo);
+   hsaKmtDestroyEvent(obj->bo);
 }
 
 static void
