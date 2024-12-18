@@ -118,12 +118,6 @@ static void deinit_amdgpu_drm(int fd, amdgpu_device_handle dev_handle)
    close(fd);
 }
 
-static int close_fd(struct vhsakmt_context *ctx, int fd, const char *from)
-{
-   vhsa_dbg("close_fd %d (%s)", fd, from);
-   return close(fd);
-}
-
 static struct vhsakmt_object *vhsakmt_object_create(HSAKMT_BO_HANDLE handle,
                                                     uint32_t flags,
                                                     uint32_t size,
@@ -227,8 +221,7 @@ static int vhsakmt_free_host_mem(struct vhsakmt_context *ctx,
 
    if (obj->fd && obj->base.blob_id == 0) {
       vhsakmt_fd_unmap(ctx, obj);
-
-      close_fd(ctx, obj->fd, __func__);
+      close(obj->fd);
       obj->fd = -1;
       return 0;
    }
@@ -327,7 +320,7 @@ static void vhsakmt_free_dmabuf_obj(struct vhsakmt_context *ctx,
    else {
       vhsa_log("free dma buf obj: res_id: %d, fd: %d", obj->base.res_id,
                obj->fd);
-      close_fd(ctx, obj->fd, __func__);
+      close(obj->fd);
       obj->fd = -1;
    }
 }
