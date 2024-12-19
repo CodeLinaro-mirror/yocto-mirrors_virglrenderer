@@ -362,7 +362,7 @@ vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_objec
    }
 
 out_free:
-   vhsa_dbg("Free obj, obj: %p, type: %s, res_id: %d, address: %p", (void *)obj,
+   vhsa_dbg("Free obj: %p, type: %s, res_id: %d, address: %p", (void *)obj,
             vhsakmt_object_type_name(obj->type), obj->base.res_id, obj->bo);
    free(obj);
 }
