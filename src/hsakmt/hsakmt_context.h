@@ -100,7 +100,6 @@ struct vhsakmt_object {
    bool exported : 1;
    bool exportable : 1;
    bool cpu_mapped : 1;
-   bool gpu_mapped : 1;
    bool guest_removed : 1;
    struct virgl_resource *res;
 
