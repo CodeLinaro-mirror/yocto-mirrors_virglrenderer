@@ -377,9 +377,7 @@ vhsakmt_device_destroy(struct virgl_context *vctx)
    vhsakmt_context_deinit(ctx);
 
    hsakmt_free_from_vamgr(&vhsakmt_backend()->vamgr, ctx->vamgr.vm_va_base_addr);
-   // hsakmt_free_from_vamgr(&vhsakmt_backend()->scratch_vamgr, ctx->scratch_base);
 
-   // free all nodes scratch memory
    for (i = 0; i < vhsakmt_backend()->vhsakmt_num_nodes; i++)
    {
       if (vhsakmt_is_gpu_node(&vhsakmt_backend()->vhsakmt_nodes[i]))
@@ -395,8 +393,7 @@ static void
 vhsakmt_device_attach_resource(struct virgl_context *vctx, struct virgl_resource *res)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(to_drm_context(vctx));
-   struct vhsakmt_object *obj =
-       vhsakmt_context_get_object_from_res_id(ctx, res->res_id);
+   struct vhsakmt_object *obj = vhsakmt_context_get_object_from_res_id(ctx, res->res_id);
    int fd;
 
    if (!obj) {
@@ -406,7 +403,7 @@ vhsakmt_device_attach_resource(struct virgl_context *vctx, struct virgl_resource
          if (res->fd == -1) {
             fd_type = virgl_resource_export_fd(res, &fd);
             if (fd_type == VIRGL_RESOURCE_FD_INVALID || fd == -1) {
-               vhsa_err("failed to export fd for res_id: %u", res->res_id);
+               vhsa_err("Failed to export fd for res_id: %u", res->res_id);
                return;
             }
          }
@@ -418,8 +415,7 @@ vhsakmt_device_attach_resource(struct virgl_context *vctx, struct virgl_resource
 
          obj->fd = fd;
          vhsakmt_context_object_set_res_id(ctx, obj, res->res_id);
-         vhsa_log("attach resource: res id: %u fd: %d", obj->base.res_id,
-                  obj->fd);
+         vhsa_log("Attach resource: res id: %u fd: %d", obj->base.res_id, obj->fd);
       } else if (fd_type == VIRGL_RESOURCE_FD_INVALID)
          return;
       else
@@ -427,15 +423,6 @@ vhsakmt_device_attach_resource(struct virgl_context *vctx, struct virgl_resource
    }
 
    obj->res = res;
-}
-
-static enum virgl_resource_fd_type
-vhsakmt_device_export_opaque_handle(UNUSED struct virgl_context *vctx,
-                                    UNUSED struct virgl_resource *res, UNUSED int *out_fd)
-{
-   /* not support currently */
-
-   return -EPERM;
 }
 
 static int
@@ -450,7 +437,7 @@ vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id, uint64_t bl
             blob_id, res_id, blob_size, blob_flags);
 
    if ((blob_id >> 32) != 0) {
-      vhsa_err("invalid blob_id: %" PRIu64, blob_id);
+      vhsa_err("Invalid blob_id: %" PRIu64, blob_id);
       return -EINVAL;
    }
 
@@ -481,17 +468,13 @@ vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id, uint64_t bl
          obj = vhsakmt_object_create(blob->u.va_handle, 0,
                                      blob_size / getpagesize(),
                                      VHSAKMT_OBJ_USERPTR);
-         vhsa_log("create userptr blob: hva: %p size: 0x%lx", blob->u.va_handle,
-                  blob_size);
+         vhsa_log("Create userptr address: %p size: 0x%lx", blob->u.va_handle, blob_size);
       } else {
          vhsa_err("No object with blob_id=%ld", blob_id);
          return -ENOENT;
       }
    }
 
-   /* a memory can only be exported once; we don't want two resources to point
-    * to the same storage.
-    */
    if (obj->exported) {
       vhsa_err("Already exported! blob_id:%ld", blob_id);
       return -EINVAL;
@@ -500,8 +483,7 @@ vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id, uint64_t bl
    vhsakmt_context_object_set_res_id(ctx, obj, res_id);
 
    if (blob_flags & VIRGL_RENDERER_BLOB_FLAG_USE_SHAREABLE) {
-      vhsa_err("VIRGL_RENDERER_BLOB_FLAG_USE_SHAREABLE is not supported in "
-               "libhsakmt vhsakmt_backend()->");
+      vhsa_err("Invalid blob_flags: 0x%x", blob_flags);
       return -EINVAL;
    } else {
       blob->type = VIRGL_RESOURCE_VA_HANDLE;
@@ -547,7 +529,6 @@ vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx, UNUSED uint64_t value
       do {                                                                     \
       } while (false)
 
-/* CMDS */
 static int
 vhsakmt_ccmd_nop(UNUSED struct vhsakmt_base_context *bctx,
                  UNUSED struct vhsakmt_ccmd_req *hdr)
@@ -1747,7 +1728,6 @@ expected doorbell: 0x%lx",
 
    ctx->base.base.destroy = vhsakmt_device_destroy;
    ctx->base.base.attach_resource = vhsakmt_device_attach_resource;
-   ctx->base.base.export_opaque_handle = vhsakmt_device_export_opaque_handle;
    ctx->base.base.get_blob = vhsakmt_device_get_blob;
    ctx->base.base.submit_fence = vhsakmt_device_submit_fence;
    ctx->base.free_object = vhsakmt_free_object;
