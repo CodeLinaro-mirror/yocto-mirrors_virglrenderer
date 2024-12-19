@@ -1138,138 +1138,191 @@ vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *
    return 0;
 }
 
+static void
+vhsakmt_queue_init_node_doorbell(struct vhsakmt_node *node, uint64_t doorbell_base_addr)
+{
+   pthread_mutex_lock(&vhsakmt_backend()->hsakmt_mutex);
+   if (node->doorbell_base_addr)
+      goto out_unlock;
+
+   node->doorbell_base_addr = (void *)ROUND_DOWN_TO(doorbell_base_addr, getpagesize());
+
+out_unlock:
+   pthread_mutex_unlock(&vhsakmt_backend()->hsakmt_mutex);
+   return;
+}
+
+static int
+vhsakmt_queue_create_doorbell_blob(struct vhsakmt_context *ctx, struct vhsakmt_node *node,
+                                   uint64_t doorbell_blob_id)
+{
+   if (!node->doorbell_base_addr) {
+      vhsa_err("Invalid doorbell base address");
+      return -EINVAL;
+   }
+
+   struct vhsakmt_object *obj = vhsakmt_object_create(
+       (void *)node->doorbell_base_addr, 0,
+       vhsakmt_doorbell_page_size(hsakmt_get_gfx_version_full(node->node_props.EngineId)),
+       VHSAKMT_OBJ_DOORBELL_PTR);
+   if (!obj)
+      return -ENOMEM;
+   vhsakmt_context_object_set_blob_id(ctx, obj, doorbell_blob_id);
+
+   return 0;
+}
+
+static int
+vhsakmt_queue_create_rw_ptr_blob(struct vhsakmt_context *ctx,
+                                 vHsaQueueResource *vqueue_res, uint64_t rw_ptr_blob_id)
+{
+   vqueue_res->host_rw_handle =
+       ROUND_DOWN_TO(vqueue_res->r.QueueWptrValue, getpagesize());
+   vqueue_res->host_write_offset =
+       vqueue_res->r.QueueWptrValue - vqueue_res->host_rw_handle;
+   vqueue_res->host_read_offset =
+       vqueue_res->r.QueueRptrValue - vqueue_res->host_rw_handle;
+
+   struct vhsakmt_object *obj = vhsakmt_object_create(
+       (void *)vqueue_res->host_rw_handle, 0, getpagesize(), VHSAKMT_OBJ_DOORBELL_RW_PTR);
+   if (!obj)
+      return -ENOMEM;
+   vhsakmt_context_object_set_blob_id(ctx, obj, rw_ptr_blob_id);
+
+   return 0;
+}
+
+static int
+vhsakmt_queue_create(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_queue_req *req,
+                     vHsaQueueResource **p_vqueue_res)
+{
+   int ret = 0;
+   struct vhsakmt_object *aql_rw_mem_obj = NULL;
+   struct vhsakmt_node *node =
+       vhsakmt_get_node(vhsakmt_backend(), req->create_queue_args.NodeId);
+   if (!node) {
+      vhsa_err("Invalid node %d", req->create_queue_args.NodeId);
+      return HSAKMT_STATUS_INVALID_NODE_UNIT;
+   }
+
+   vHsaQueueResource *vqueue_res = calloc(1, sizeof(vHsaQueueResource));
+   if (!vqueue_res) {
+      vhsa_err("vhsakmt_ccmd_queue calloc failed");
+      return -ENOMEM;
+   }
+
+   vqueue_res->queue_handle = (uint64_t)vqueue_res;
+   vqueue_res->r.Queue_write_ptr_aql = req->create_queue_args.Queue_write_ptr_aql;
+   vqueue_res->r.Queue_read_ptr_aql = req->create_queue_args.Queue_read_ptr_aql;
+
+   ret = hsaKmtCreateQueue(
+       req->create_queue_args.NodeId, req->create_queue_args.Type,
+       req->create_queue_args.QueuePercentage, req->create_queue_args.Priority,
+       (void *)req->create_queue_args.QueueAddress,
+       req->create_queue_args.QueueSizeInBytes, req->create_queue_args.Event,
+       &(vqueue_res->r));
+
+   vhsa_log("Create queue NodeId: %d Type: %d QueuePercentage: %d Priority: %d "
+            "QueueAddress : 0x%lx QueueSizeInBytes: %lx Event: %p QueueResource: %p "
+            "QueueId: %lx QueueId_ptr: %p ret = %d ",
+            req->create_queue_args.NodeId, req->create_queue_args.Type,
+            req->create_queue_args.QueuePercentage, (int)req->create_queue_args.Priority,
+            req->create_queue_args.QueueAddress, req->create_queue_args.QueueSizeInBytes,
+            (void *)req->create_queue_args.Event, (void *)vqueue_res,
+            vqueue_res->r.QueueId, (void *)vqueue_res->r.QueueId, ret);
+
+   vhsa_log("Queue doorbell: %p, write ptr: %p read ptr: %p",
+            (void *)vqueue_res->r.Queue_DoorBell, (void *)vqueue_res->r.QueueWptrValue,
+            (void *)vqueue_res->r.QueueRptrValue);
+
+   if (ret) {
+      vhsa_err("Create queue call hsaKmtCreateQueue failed, ret: %d", ret);
+      goto out_free;
+   }
+
+   if (vqueue_res->r.Queue_DoorBell == NULL) {
+      vhsa_err("Queue_DoorBell is NULL");
+      goto out_destroy_queue;
+   }
+
+   if (!node->doorbell_base_addr) {
+      vhsakmt_queue_init_node_doorbell(node, (uint64_t)vqueue_res->r.QueueDoorBell);
+      vhsa_log("Queue init node: %d doorbell base: %p", req->create_queue_args.NodeId,
+               node->doorbell_base_addr);
+   }
+
+   vqueue_res->host_doorbell = (HSAuint64)vqueue_res->r.Queue_DoorBell_aql;
+   vqueue_res->host_doorbell_offset =
+       vqueue_res->r.QueueDoorBell - (uint64_t)node->doorbell_base_addr;
+
+   /* For per context doorbell first mapping */
+   if (req->doorbell_blob_id) {
+      ret = vhsakmt_queue_create_doorbell_blob(ctx, node, req->doorbell_blob_id);
+      if (ret) {
+         vhsa_err("Create doorbell blob failed, ret: %d", ret);
+         goto out_destroy_queue;
+      }
+   }
+
+   /* For not AQL queue r/w ptr mapping */
+   if (req->rw_ptr_blob_id && req->create_queue_args.Type != HSA_QUEUE_COMPUTE_AQL) {
+      ret = vhsakmt_queue_create_rw_ptr_blob(ctx, vqueue_res, req->rw_ptr_blob_id);
+      if(ret) {
+         vhsa_err("Create rw ptr blob failed, ret: %d", ret);
+         goto out_destroy_queue;
+      }
+   }
+
+   /* For AQL queue rw BO tpye change */
+   if (req->create_queue_args.Type == HSA_QUEUE_COMPUTE_AQL && req->res_id) {
+      aql_rw_mem_obj = vhsakmt_context_get_object_from_res_id(ctx, req->res_id);
+      if (aql_rw_mem_obj) {
+         aql_rw_mem_obj->type = VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR;
+         vhsa_log("Change res: %d, address: %p, size: %lx to AQL rw ptr type",
+                  req->res_id, aql_rw_mem_obj->bo, aql_rw_mem_obj->base.size);
+      } else {
+         vhsa_err("Can not find AQL rw BO res_id %d", req->res_id);
+         goto out_destroy_queue;
+      }
+   }
+
+   struct vhsakmt_object *queue_obj = vhsakmt_object_create(
+       (void *)vqueue_res, 0, sizeof(*vqueue_res), VHSAKMT_OBJ_QUEUE);
+   queue_obj->queue = vqueue_res;
+   vhsakmt_context_object_set_blob_id(ctx, queue_obj, req->blob_id);
+
+   if (req->create_queue_args.Type == HSA_QUEUE_COMPUTE_AQL && aql_rw_mem_obj) {
+      queue_obj->aql_rw_mem = aql_rw_mem_obj;
+      aql_rw_mem_obj->aql_queue = queue_obj;
+   }
+
+   *p_vqueue_res = vqueue_res;
+   return 0;
+
+out_destroy_queue:
+   hsaKmtDestroyQueue(vqueue_res->r.QueueId);
+out_free:
+   free(vqueue_res);
+   return ret;
+}
+
 static int
 vhsakmt_ccmd_queue(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)
 {
-   const struct vhsakmt_ccmd_queue_req *req = to_vhsakmt_ccmd_queue_req(hdr);
+   struct vhsakmt_ccmd_queue_req *req = to_vhsakmt_ccmd_queue_req(hdr);
    struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
    struct vhsakmt_ccmd_queue_rsp *rsp;
    unsigned rsp_len = sizeof(*rsp);
-   u_int64_t doorbell_offset;
-   struct vhsakmt_object *aql_rw_mem_obj = NULL;
 
    switch (req->type) {
    case VHSAKMT_CCMD_QUEUE_CREATE: {
       rsp_len = size_add(sizeof(vHsaQueueResource), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
+      vHsaQueueResource *vqueue_res = NULL;
 
-      struct vhsakmt_node *node = vhsakmt_get_node(vhsakmt_backend(), req->create_queue_args.NodeId);
-      if (!node)
-      {
-         vhsa_err("Invalid node %d", req->create_queue_args.NodeId);
-         rsp->ret = HSAKMT_STATUS_INVALID_NODE_UNIT;
-         break;
-      }
-
-      vHsaQueueResource *vqueue_res = calloc(1, sizeof(vHsaQueueResource));
-      if (!vqueue_res) {
-         vhsa_err("vhsakmt_ccmd_queue calloc failed");
-         rsp->ret = -ENOMEM;
-         break;
-      }
-      vqueue_res->r.Queue_write_ptr_aql =
-          req->create_queue_args.Queue_write_ptr_aql;
-      vqueue_res->r.Queue_read_ptr_aql =
-          req->create_queue_args.Queue_read_ptr_aql;
-      vqueue_res->queue_handle = (uint64_t)vqueue_res;
-
-      rsp->ret = hsaKmtCreateQueue(
-          req->create_queue_args.NodeId, req->create_queue_args.Type,
-          req->create_queue_args.QueuePercentage,
-          req->create_queue_args.Priority,
-          (void *)req->create_queue_args.QueueAddress,
-          req->create_queue_args.QueueSizeInBytes, req->create_queue_args.Event,
-          &(vqueue_res->r));
-
-      vhsa_log(
-          "[QUEUE] create NodeId: %d Type: %d QueuePercentage: %d Priority: %d QueueAddress: 0x%lx \n \
-QueueSizeInBytes: %lx Event: %p QueueResource: %p QueueId :%lx QueueId_ptr: %p ret = %d",
-          req->create_queue_args.NodeId, req->create_queue_args.Type,
-          req->create_queue_args.QueuePercentage,
-          (int)req->create_queue_args.Priority,
-          req->create_queue_args.QueueAddress,
-          req->create_queue_args.QueueSizeInBytes,
-          (void *)req->create_queue_args.Event, (void *)vqueue_res,
-          vqueue_res->r.QueueId, (void *)vqueue_res->r.QueueId, rsp->ret);
-
-      if (rsp->ret) {
-         vhsa_err("[QUEUE] create failed");
-         break;
-      }
-
-      /* create doorbell address resource. */
-        if (!node->doorbell_base_addr)
-        {
-            node->doorbell_base_addr = (void *)ROUND_DOWN_TO((uint64_t)vqueue_res->r.QueueDoorBell, 
-               getpagesize());
-        }
-
-      doorbell_offset =
-          vqueue_res->r.QueueDoorBell - (uint64_t)node->doorbell_base_addr;
-
-      vqueue_res->host_doorbell = (HSAuint64)vqueue_res->r.Queue_DoorBell_aql;
-      vqueue_res->host_doorbell_offset = doorbell_offset;
-
-      vhsa_log("[QUEUE] Doorbell: addr: %p offset: %lx doorbell_base_addr: %p",
-               (void *)vqueue_res->r.Queue_DoorBell, doorbell_offset,
-               node->doorbell_base_addr);
-
-      if (vqueue_res->r.Queue_DoorBell == NULL) {
-         rsp->ret = HSAKMT_STATUS_ERROR;
-         vhsa_err("[QUEUE] doorbell is NULL");
-         break;
-      }
-
-      if (req->doorbell_blob_id) {
-         struct vhsakmt_object *obj = vhsakmt_object_create(
-             (void *)node->doorbell_base_addr, 0, vhsakmt_doorbell_page_size(hsakmt_get_gfx_version_full(node->node_props.EngineId)),
-             VHSAKMT_OBJ_DOORBELL_PTR);
-         vhsakmt_context_object_set_blob_id(ctx, obj, req->doorbell_blob_id);
-      }
-
-      /* For r/w ptr mapping */
-      if (req->rw_ptr_blob_id &&
-          req->create_queue_args.Type != HSA_QUEUE_COMPUTE_AQL) {
-         vqueue_res->host_rw_handle = ROUND_DOWN_TO(
-             (uint64_t)vqueue_res->r.Queue_write_ptr_aql, getpagesize());
-         vqueue_res->host_write_offset =
-             vqueue_res->r.QueueWptrValue - vqueue_res->host_rw_handle;
-         vqueue_res->host_read_offset =
-             vqueue_res->r.QueueRptrValue - vqueue_res->host_rw_handle;
-
-         struct vhsakmt_object *obj =
-             vhsakmt_object_create((void *)vqueue_res->host_rw_handle, 0,
-                                   getpagesize(), VHSAKMT_OBJ_DOORBELL_RW_PTR);
-         vhsakmt_context_object_set_blob_id(ctx, obj, req->rw_ptr_blob_id);
-      }
-
-      if (req->create_queue_args.Type == HSA_QUEUE_COMPUTE_AQL && req->res_id) {
-         aql_rw_mem_obj =
-             vhsakmt_context_get_object_from_res_id(ctx, req->res_id);
-         if (aql_rw_mem_obj) {
-            aql_rw_mem_obj->type = VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR;
-            vhsa_log("[Queue] change res: %d, addr: %p, size: %lx to RW PTR",
-                     req->res_id, aql_rw_mem_obj->bo,
-                     aql_rw_mem_obj->base.size);
-         }
-      }
-
-      vhsa_log("[Queue] write ptr: %p read ptr: %p",
-               (void *)vqueue_res->r.Queue_write_ptr_aql,
-               (void *)vqueue_res->r.Queue_read_ptr_aql);
-
-      struct vhsakmt_object *queue_obj = vhsakmt_object_create(
-          (void *)vqueue_res, 0, sizeof(*vqueue_res), VHSAKMT_OBJ_QUEUE);
-      queue_obj->queue = vqueue_res;
-      vhsakmt_context_object_set_blob_id(ctx, queue_obj, req->blob_id);
-
-      if (req->create_queue_args.Type == HSA_QUEUE_COMPUTE_AQL &&
-          aql_rw_mem_obj) {
-         queue_obj->aql_rw_mem = aql_rw_mem_obj;
-         aql_rw_mem_obj->aql_queue = queue_obj;
-      }
-
-      memcpy(&rsp->vqueue_res, vqueue_res, sizeof(*vqueue_res));
+      rsp->ret = vhsakmt_queue_create(ctx, req, &vqueue_res);
+      if (!rsp->ret)
+         memcpy(&rsp->vqueue_res, vqueue_res, sizeof(*vqueue_res));
 
       break;
    }
@@ -1278,20 +1331,21 @@ QueueSizeInBytes: %lx Event: %p QueueResource: %p QueueId :%lx QueueId_ptr: %p r
 
       struct vhsakmt_object *obj =
           vhsakmt_context_get_object_from_res_id(ctx, req->res_id);
-
-      if (!obj) {
-         rsp->ret = hsaKmtDestroyQueue(req->QueueId);
+      if (obj) {
+         vhsakmt_free_object(&ctx->base, &obj->base);
          break;
       }
 
-      vhsakmt_free_object(&ctx->base, &obj->base);
-
+      rsp->ret = hsaKmtDestroyQueue(req->QueueId);
       break;
    }
    default:
-      vhsa_err("Queue CMD: %d not support.", req->type);
+      vhsa_err("Queue command: %d not support.", req->type);
       break;
    }
+
+   if (rsp->ret)
+      vhsa_err("Type: %d ret: %d", req->type, rsp->ret);
 
    return 0;
 }
