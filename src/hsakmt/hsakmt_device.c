@@ -539,46 +539,12 @@ vhsakmt_ccmd_nop(UNUSED struct vhsakmt_base_context *bctx,
 static int
 vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)
 {
-   const struct vhsakmt_ccmd_query_info_req *req =
-       to_vhsakmt_ccmd_query_info_req(hdr);
+   const struct vhsakmt_ccmd_query_info_req *req = to_vhsakmt_ccmd_query_info_req(hdr);
    struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
    struct vhsakmt_ccmd_query_info_rsp *rsp;
    unsigned rsp_len = sizeof(*rsp);
 
    switch (req->type) {
-   case VHSAKMT_CCMD_QUERY_DRM_AMDGPU: {
-      void *value = alloca(req->info.return_size);
-      struct drm_amdgpu_info request;
-      memset(value, 0, req->info.return_size);
-      memcpy(&request, &req->info, sizeof(request));
-      request.return_pointer = (uintptr_t)value;
-
-      rsp_len = size_add(req->info.return_size, rsp_len);
-      VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
-      int r = drmCommandWrite(amdgpu_device_get_fd(ctx->dev), DRM_AMDGPU_INFO,
-                              &request, sizeof(request));
-
-      rsp->ret = r;
-
-      if (rsp->ret < 0)
-         vhsa_err("ioctl error: fd: %d r: %d|%d %s",
-                  amdgpu_device_get_fd(ctx->dev), rsp->ret, r, strerror(errno));
-
-      memcpy(rsp->payload, value, req->info.return_size);
-      break;
-   }
-   case VHSAKMT_CCMD_QUERY_SW_INFO: {
-      uint32_t address32_hi;
-
-      rsp_len = size_add(sizeof(uint32_t), rsp_len);
-      VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
-      rsp->ret = amdgpu_query_sw_info(ctx->dev, amdgpu_sw_info_address32_hi,
-                                      &address32_hi);
-      memcpy(rsp->payload, &address32_hi, sizeof(uint32_t));
-      break;
-   }
    case VHSAKMT_CCMD_QUERY_GPU_INFO: {
       amdgpu_device_handle dev_handle;
       int fd;
@@ -597,22 +563,18 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
       break;
    }
    case VHSAKMT_CCMD_QUERY_OPEN_KFD: {
-      HSAKMT_STATUS result = HSAKMT_STATUS_SUCCESS;
-
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
+      rsp->ret = HSAKMT_STATUS_SUCCESS;
 
       rsp->open_kfd_rsp.vm_start = ctx->vamgr.vm_va_base_addr;
       rsp->open_kfd_rsp.vm_size = ctx->vamgr.reserve_size;
 
       if (req->open_kfd_args.cur_vm_start > ctx->vamgr.vm_va_base_addr) {
-         fprintf(stderr, "VM error, guest VM start > host VM start\n");
-         fprintf(stderr, "Guest VM start: 0x%lx\n",
-                 req->open_kfd_args.cur_vm_start);
-         fprintf(stderr, "Host VM start: 0x%lx\n", ctx->vamgr.vm_va_base_addr);
-         result = HSAKMT_STATUS_ERROR;
+         fprintf(stderr, "VM error, guest VM start: 0x%lx, host VM start: 0x%lx\n",
+                 req->open_kfd_args.cur_vm_start, ctx->vamgr.vm_va_base_addr);
+         rsp->ret = HSAKMT_STATUS_ERROR;
       }
 
-      rsp->ret = result;
       break;
    }
    case VHSAKMT_CCMD_QUERY_TILE_CONFIG: {
@@ -628,25 +590,21 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
          break;
       }
 
-      rsp_len = size_add(req->tile_config_args.config.NumTileConfigs *
-                             sizeof(HSAuint32),
+      rsp_len = size_add(req->tile_config_args.config.NumTileConfigs * sizeof(HSAuint32),
                          rsp_len);
-      rsp_len = size_add(req->tile_config_args.config.NumMacroTileConfigs *
-                             sizeof(HSAuint32),
-                         rsp_len);
+      rsp_len = size_add(
+          req->tile_config_args.config.NumMacroTileConfigs * sizeof(HSAuint32), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
 
       rsp->tile_config_rsp = req->tile_config_args.config;
       void *temp_tile_config = req->tile_config_args.config.TileConfig;
-      void *temp_macro_tile_config =
-          req->tile_config_args.config.MacroTileConfig;
+      void *temp_macro_tile_config = req->tile_config_args.config.MacroTileConfig;
 
-        rsp->tile_config_rsp.TileConfig = (void*)rsp->payload;
-        rsp->tile_config_rsp.MacroTileConfig = (void*)((uint8_t *)rsp->payload + 
-            rsp->tile_config_rsp.NumTileConfigs * sizeof(HSAuint32));
+      rsp->tile_config_rsp.TileConfig = (void *)rsp->payload;
+      rsp->tile_config_rsp.MacroTileConfig = (void *)((uint8_t *)rsp->payload +
+         rsp->tile_config_rsp.NumTileConfigs * sizeof(HSAuint32));
 
-      rsp->ret = hsaKmtGetTileConfig(req->tile_config_args.NodeId,
-                                     &rsp->tile_config_rsp);
+      rsp->ret = hsaKmtGetTileConfig(req->tile_config_args.NodeId, &rsp->tile_config_rsp);
 
       rsp->tile_config_rsp.TileConfig = temp_tile_config;
       rsp->tile_config_rsp.MacroTileConfig = temp_macro_tile_config;
@@ -659,33 +617,30 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
       break;
    }
    case VHSAKMT_CCMD_QUERY_REL_SYS_PROP: {
-      rsp_len = size_add(rsp_len, sizeof(uint32_t));
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
+      /* Do nothing, release sys prop in device destroy */
       rsp->ret = 0;
-
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_SYS_PROP: {
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-      rsp->ret = hsaKmtAcquireSystemProperties(&rsp->sys_props);
 
+      rsp->ret = hsaKmtAcquireSystemProperties(&rsp->sys_props);
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_NODE_PROP: {
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-      rsp->ret = hsaKmtGetNodeProperties(req->NodeID, &rsp->node_props);
 
+      rsp->ret = hsaKmtGetNodeProperties(req->NodeID, &rsp->node_props);
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_XNACK_MODE: {
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-      rsp->ret = hsaKmtGetXNACKMode(&rsp->xnack_mode);
 
+      rsp->ret = hsaKmtGetXNACKMode(&rsp->xnack_mode);
       break;
    }
    case VHSAKMT_CCMD_QUERY_RUN_TIME_ENABLE: {
-      rsp_len += sizeof(HSAuint32);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
 
       bool setup = req->run_time_enable_args.setupTtmp;
@@ -693,21 +648,18 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
 
       if (rsp->ret == HSAKMT_STATUS_UNAVAILABLE)
          rsp->ret = HSAKMT_STATUS_SUCCESS;
-
       break;
    }
    case VHSAKMT_CCMD_QUERY_RUN_TIME_DISABLE: {
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
-      rsp->ret = hsaKmtRuntimeDisable();
+      /* Do nothing, runtime disable in device destroy */
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_NOD_MEM_PROP: {
       HSAuint32 node_id = req->node_mem_prop_args.NodeId;
       HSAuint32 num_banks = req->node_mem_prop_args.NumBanks;
 
-      if (req->node_mem_prop_args.NumBanks >
-          VHSAKMT_CCMD_QUERY_MAX_GET_NOD_MEM_PROP) {
+      if (req->node_mem_prop_args.NumBanks > VHSAKMT_CCMD_QUERY_MAX_GET_NOD_MEM_PROP) {
          vhsa_err("Invalid get node mem properity NumBanks: %d",
                   req->node_mem_prop_args.NumBanks);
          VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
@@ -718,8 +670,7 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
       rsp_len = size_add(num_banks * sizeof(HsaMemoryProperties), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
 
-      HsaMemoryProperties *mem_prop =
-          malloc(num_banks * sizeof(HsaMemoryProperties));
+      HsaMemoryProperties *mem_prop = malloc(num_banks * sizeof(HsaMemoryProperties));
       if (!mem_prop) {
          rsp->ret = -ENOMEM;
          break;
@@ -728,7 +679,6 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
       rsp->ret = hsaKmtGetNodeMemoryProperties(node_id, num_banks, mem_prop);
       memcpy(rsp->payload, mem_prop, num_banks * sizeof(HsaMemoryProperties));
       free(mem_prop);
-
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_NOD_CACHE_PROP: {
@@ -741,26 +691,24 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
          break;
       }
 
-      rsp_len = size_add(req->node_cache_prop_args.NumCaches *
-                             sizeof(HsaCacheProperties),
+      rsp_len = size_add(req->node_cache_prop_args.NumCaches * sizeof(HsaCacheProperties),
                          rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
 
-      HsaCacheProperties *cache_prop = malloc(
-          req->node_cache_prop_args.NumCaches * sizeof(HsaCacheProperties));
+      HsaCacheProperties *cache_prop =
+          malloc(req->node_cache_prop_args.NumCaches * sizeof(HsaCacheProperties));
       if (!cache_prop) {
          rsp->ret = -ENOMEM;
          break;
       }
 
       rsp->ret = hsaKmtGetNodeCacheProperties(
-          req->node_cache_prop_args.NodeId,
-          req->node_cache_prop_args.ProcessorId,
+          req->node_cache_prop_args.NodeId, req->node_cache_prop_args.ProcessorId,
           req->node_cache_prop_args.NumCaches, cache_prop);
       memcpy(rsp->payload, cache_prop,
              req->node_cache_prop_args.NumCaches * sizeof(HsaCacheProperties));
-      free(cache_prop);
 
+      free(cache_prop);
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_NOD_IO_LINK_PROP: {
@@ -780,12 +728,10 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
       HsaIoLinkProperties *IoLinkProperties =
           malloc(num_io_links * sizeof(HsaIoLinkProperties));
 
-      rsp->ret = hsaKmtGetNodeIoLinkProperties(node_id, num_io_links,
-                                               IoLinkProperties);
-      memcpy(rsp->payload, IoLinkProperties,
-             num_io_links * sizeof(HsaIoLinkProperties));
-      free(IoLinkProperties);
+      rsp->ret = hsaKmtGetNodeIoLinkProperties(node_id, num_io_links, IoLinkProperties);
+      memcpy(rsp->payload, IoLinkProperties, num_io_links * sizeof(HsaIoLinkProperties));
 
+      free(IoLinkProperties);
       break;
    }
    case VHSAKMT_CCMD_QUERY_GET_CLOCK_COUNTERS: {
@@ -796,42 +742,43 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
    }
    case VHSAKMT_CCMD_QUERY_POINTER_INFO: {
       HsaPointerInfo info = {0};
+      int ret = 0;
 
-      rsp_len = size_add(info.NMappedNodes * sizeof(uint32_t), rsp_len);
+      ret = hsaKmtQueryPointerInfo((void *)req->pointer, &info);
+
+      rsp_len = size_add(info.NMappedNodes * sizeof(HSAuint32), rsp_len);
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-
-      rsp->ret = hsaKmtQueryPointerInfo((void *)req->pointer, &info);
+      rsp->ret = ret;
 
       memcpy(&rsp->ptr_info, &info, sizeof(info));
 
-      vhsa_dbg("[QUERY] pointer: 0x%lx, NMappedNodes: %d, MappedNodes: %p",
-               req->pointer, info.NMappedNodes, (void *)info.MappedNodes);
+      vhsa_dbg("Query pointer info: 0x%lx, NMappedNodes: %d, MappedNodes: %p, "
+               "NRegisteredNodes: %d, RegisteredNodes: %p",
+               req->pointer, info.NMappedNodes, (void *)info.MappedNodes,
+               info.NRegisteredNodes, (void *)info.RegisteredNodes);
 
       if (info.NMappedNodes && info.MappedNodes)
-         memcpy(rsp->payload, info.MappedNodes,
-                info.NMappedNodes * sizeof(uint32_t));
+         memcpy(rsp->payload, info.MappedNodes, info.NMappedNodes * sizeof(HSAuint32));
 
       break;
    }
    case VHSAKMT_CCMD_QUERY_NANO_TIME: {
       struct timespec tp;
       VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
-      rsp->ret = 0;
 
       clock_gettime(CLOCK_MONOTONIC, &tp);
       rsp->nano_time_rsp.nano_time =
-          (uint64_t)tp.tv_sec * (1000ULL * 1000ULL * 1000ULL) +
-          (uint64_t)tp.tv_nsec;
+          (uint64_t)tp.tv_sec * (1000ULL * 1000ULL * 1000ULL) + (uint64_t)tp.tv_nsec;
+      rsp->ret = 0;
       break;
    }
 
    default:
-      vhsa_err("Unsopported CMD: %d", req->type);
+      vhsa_err("Unsopported query command: %d", req->type);
    }
 
    if (rsp->ret)
-      vhsa_err("vhsakmt_ccmd_query_info, type: %d ret: %d", req->type,
-               rsp->ret);
+      vhsa_err("Type: %d ret: %d", req->type, rsp->ret);
 
    return 0;
 }
