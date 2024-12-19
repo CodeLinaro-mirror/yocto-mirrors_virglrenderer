@@ -1444,13 +1444,12 @@ vhsakmt_vm_init(struct vhsakmt_backend *b)
                  b->vamgr_vm_fixed_base_addr);
          return -EINVAL;
       }
-      vm_base_addr =
-          ROUND_DOWN_TO(b->vamgr_vm_fixed_base_addr - b->vamgr_vm_kfd_size -
-                            b->vamgr_vm_scratch_size,
-                        VHSA_1G_SIZE);
+      vm_base_addr = ROUND_DOWN_TO(b->vamgr_vm_fixed_base_addr - b->vamgr_vm_kfd_size -
+                                       b->vamgr_vm_scratch_size,
+                                   VHSA_1G_SIZE);
    } else {
-      void *tmp_addr = malloc(getpagesize());
-      if (!tmp_addr) {
+      void *mem = malloc(getpagesize());
+      if (!mem) {
          fprintf(stderr, "Can not alloc vm base address.\n");
          return -ENOMEM;
       }
@@ -1459,9 +1458,9 @@ vhsakmt_vm_init(struct vhsakmt_backend *b)
          fprintf(stderr, "Use default heap interval size: 0x%lx.\n",
                  b->vamgr_vm_heap_interval_size);
       }
-      vm_base_addr = align64(
-          ((uint64_t)tmp_addr + b->vamgr_vm_heap_interval_size), VHSA_1G_SIZE);
-      free(tmp_addr);
+      vm_base_addr =
+          align64(((uint64_t)mem + b->vamgr_vm_heap_interval_size), VHSA_1G_SIZE);
+      free(mem);
    }
 
 #ifdef HSAKMT_VIRTIO
@@ -1472,12 +1471,11 @@ vhsakmt_vm_init(struct vhsakmt_backend *b)
               vm_base_addr, b->vamgr_vm_kfd_size);
       return -ENOMEM;
    }
-   fprintf(stdout, "Reserve vm base address at 0x%lx size: 0x%lx ok.\n",
-           vm_base_addr, b->vamgr_vm_kfd_size);
 
    /* set expected doorbell address */
    if (vhsakmt_backend()->vamgr_vm_base_addr_type == VHSA_VAMGR_VM_TYPE_FIXED_BASE)
-      vhsakmt_backend()->expected_doorbell_base_addr = vhsakmt_backend()->vamgr_vm_fixed_base_addr;
+      vhsakmt_backend()->expected_doorbell_base_addr =
+          vhsakmt_backend()->vamgr_vm_fixed_base_addr;
    else
       vhsakmt_backend()->expected_doorbell_base_addr =
           (vm_base_addr + b->vamgr_vm_kfd_size + b->vamgr_vm_scratch_size);
@@ -1496,16 +1494,14 @@ vhsakmt_vm_init(struct vhsakmt_backend *b)
 
    for (i = 0; i < b->vhsakmt_num_nodes; i++) {
       if (b->vhsakmt_nodes[i].node_props.KFDGpuID) {
-         printf("Init scratch vamgr for node[%d]: [%lx-%lx]-%lx\n", i, vm_base_addr, vm_base_addr + b->vamgr_vm_scratch_size, b->vamgr_vm_scratch_size);
          if (vhsakmt_init_vamgr(&b->vhsakmt_nodes[i].scratch_vamgr, vm_base_addr,
-                                 b->vamgr_vm_scratch_size)) {
-               fprintf(stderr, "Init scratch vamgr failed");
-               return -ENOMEM;
+                                b->vamgr_vm_scratch_size)) {
+            fprintf(stderr, "Init scratch vamgr failed");
+            return -ENOMEM;
          }
 
          b->vhsakmt_nodes[i].scratch_vamgr.vm_va_base_addr = vm_base_addr;
          vm_base_addr += b->vamgr_vm_scratch_size;
-
       }
    }
 
