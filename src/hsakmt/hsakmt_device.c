@@ -1511,48 +1511,40 @@ vhsakmt_vm_init(struct vhsakmt_backend *b)
 static int
 vhsakmt_device_get_nodes_properties(struct vhsakmt_backend *b)
 {
-    int ret;
-    uint32_t i;
-    struct vhsakmt_node *node;
+   int ret;
+   uint32_t i;
+   struct vhsakmt_node *node;
 
-    ret = hsaKmtAcquireSystemProperties(&b->sys_props);
-    if (ret)
-    {
-        fprintf(stderr, "Acquire system properties failed.\n");
-        return ret;
-    }
+   ret = hsaKmtAcquireSystemProperties(&b->sys_props);
+   if (ret) {
+      fprintf(stderr, "Acquire system properties failed.\n");
+      return ret;
+   }
 
-    if (b->sys_props.NumNodes == 0)
-    {
-        fprintf(stderr, "No nodes found.\n");
-        return -EINVAL;
-    }
-    
-    b->vhsakmt_num_nodes = b->sys_props.NumNodes;
-    printf("Found %d nodes.\n", b->vhsakmt_num_nodes);
+   if (b->sys_props.NumNodes == 0) {
+      fprintf(stderr, "No nodes found.\n");
+      return -EINVAL;
+   }
 
-    b->vhsakmt_nodes = calloc(b->vhsakmt_num_nodes, sizeof(struct vhsakmt_node));
+   b->vhsakmt_num_nodes = b->sys_props.NumNodes;
+   b->vhsakmt_nodes = calloc(b->vhsakmt_num_nodes, sizeof(struct vhsakmt_node));
 
-    for (i = 0; i < b->vhsakmt_num_nodes; i++)
-    {
-        node = vhsakmt_get_node(b, i);
-        if (!node)
-        {
-            fprintf(stderr, "Get node %d failed.\n", i);
-            return -EINVAL;
-        }
-        ret = hsaKmtGetNodeProperties(i, &node->node_props);
-        printf("Node[%d] KFDGPUID: %d.\n", i, node->node_props.KFDGpuID);
-        if (ret)
-        {
-            fprintf(stderr, "Get node %d properties failed.\n", i);
-            return ret;
-        }
-        if (node->node_props.KFDGpuID)
-            b->vhsakmt_gpu_count += 1;
-    }
+   for (i = 0; i < b->vhsakmt_num_nodes; i++) {
+      node = vhsakmt_get_node(b, i);
+      if (!node) {
+         fprintf(stderr, "Get node %d failed.\n", i);
+         return -EINVAL;
+      }
+      ret = hsaKmtGetNodeProperties(i, &node->node_props);
+      if (ret) {
+         fprintf(stderr, "Get node %d properties failed.\n", i);
+         return ret;
+      }
+      if (node->node_props.KFDGpuID)
+         b->vhsakmt_gpu_count += 1;
+   }
 
-    return 0;
+   return 0;
 }
 
 int
@@ -1600,14 +1592,13 @@ vhsakmt_device_init(void)
 }
 
 static void
-vhsakmt_device_destroy_vamgr(struct vhsakmt_backend *b)
+vhsakmt_device_destroy_scratch_vamgr(struct vhsakmt_backend *b)
 {
     uint32_t i;
 
-    for (i = 0; i < b->vhsakmt_num_nodes; i++)
-    {
-        if (vhsakmt_is_gpu_node(&b->vhsakmt_nodes[i]))
-            vhsakmt_destroy_vamgr(&b->vhsakmt_nodes[i].scratch_vamgr);
+    for (i = 0; i < b->vhsakmt_num_nodes; i++) {
+       if (vhsakmt_is_gpu_node(&b->vhsakmt_nodes[i]))
+          vhsakmt_destroy_vamgr(&b->vhsakmt_nodes[i].scratch_vamgr);
     }
 }
 
@@ -1621,8 +1612,7 @@ vhsakmt_device_fini(void)
 #endif
 
    vhsakmt_destroy_vamgr(&vhsakmt_backend()->vamgr);
-   // vhsakmt_destroy_vamgr(&vhsakmt_backend()->scratch_vamgr);
-   vhsakmt_device_destroy_vamgr(vhsakmt_backend());
+   vhsakmt_device_destroy_scratch_vamgr(vhsakmt_backend());
 
    hsaKmtReleaseSystemProperties();
    hsaKmtCloseKFD();
@@ -1651,8 +1641,7 @@ hsakmt_device_create(UNUSED size_t debug_len, UNUSED const char *debug_name)
    if (!ctx)
       return NULL;
 
-   if (!vhsakmt_context_init(ctx, -1, ccmd_dispatch,
-                             ARRAY_SIZE(ccmd_dispatch))) {
+   if (!vhsakmt_context_init(ctx, -1, ccmd_dispatch, ARRAY_SIZE(ccmd_dispatch))) {
       free(ctx);
       return NULL;
    }
@@ -1674,24 +1663,6 @@ hsakmt_device_create(UNUSED size_t debug_len, UNUSED const char *debug_name)
       fprintf(stderr, "Init vamgr failed");
       return NULL;
    }
-
-/*
-   vhsa_log("vhsakmt device init success.\n\
-device name: %s \n\
-VM base type: %s \n\
-kfd VM: [0x%lx-0x%lx]-0x%lx \n\
-scratch VM: [0x%lx-0x%lx]-0x%lx \n\
-expected doorbell: 0x%lx",
-            vhsakmt_backend()->name,
-            vhsakmt_backend()->vamgr_vm_base_addr_type == VHSA_VAMGR_VM_TYPE_FIXED_BASE
-                ? "VHSA_VAMGR_VM_TYPE_FIXED_BASE"
-                : "VHSA_VAMGR_VM_TYPE_HEAP_INTERVAL_BASE",
-            vhsakmt_backend()->vamgr.vm_va_base_addr, vhsakmt_backend()->vamgr.vm_va_high_addr,
-            vhsakmt_backend()->vamgr.reserve_size, vhsakmt_backend()->scratch_vamgr.vm_va_base_addr,
-            vhsakmt_backend()->scratch_vamgr.vm_va_high_addr,
-            vhsakmt_backend()->scratch_vamgr.reserve_size,
-            vhsakmt_backend()->expected_doorbell_base_addr);
-*/
 
    vhsa_log("vhsakmt vamgr:\nvm base addr: 0x%lx \nvm reserve size: 0x%lx",
             ctx->vamgr.vm_va_base_addr, ctx->vamgr.reserve_size);
