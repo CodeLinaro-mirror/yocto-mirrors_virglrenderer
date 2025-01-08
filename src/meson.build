@@ -204,6 +204,7 @@ if with_hsakmt_amdgpu
    virgl_sources += hsakmt_amdgpu_source
    virgl_depends += [libhsakmt_dep]
    virgl_depends += [libdrm_amdgpu_dep]
+   virgl_depends += [libnuma_dep]
 endif
 
 if with_render_server

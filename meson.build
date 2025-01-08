@@ -122,6 +122,7 @@ drm_uapi_dep = declare_dependency(
 pkg_cflags = []
 
 libhsakmt_dep = dependency('libhsakmt', version: '>=1.0.6', required: with_hsakmt_amdgpu)
+libnuma_dep = dependency('numa', version : '>=1.0.1', required: with_hsakmt_amdgpu)
 
 has_attribute_cleanup = cc.compiles('''
    void func(void *v) {}
