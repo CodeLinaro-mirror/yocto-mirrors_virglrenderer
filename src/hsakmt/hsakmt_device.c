@@ -1237,7 +1237,7 @@ vhsakmt_queue_create(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_queue_req 
          req->create_queue_args.QueueSizeInBytes, req->create_queue_args.Event,
          &(vqueue_res->r));
 
-   vhsa_log("Create queue NodeId: %d Type: %d QueuePercentage: %d Priority: %d SdmaEngineId: %d"
+   vhsa_log("Create queue NodeId: %d Type: %d QueuePercentage: %d Priority: %d SdmaEngineId: %u "
             "QueueAddress : 0x%lx QueueSizeInBytes: %lx Event: %p QueueResource: %p "
             "QueueId: %lx QueueId_ptr: %p ret = %d ",
             req->create_queue_args.NodeId, req->create_queue_args.Type,
