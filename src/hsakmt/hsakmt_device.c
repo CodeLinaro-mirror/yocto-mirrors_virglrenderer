@@ -1192,6 +1192,12 @@ vhsakmt_queue_create_rw_ptr_blob(struct vhsakmt_context *ctx,
    return 0;
 }
 
+static inline bool
+vhsakmt_valid_sdmaid(uint32_t sdmaid)
+{
+   return !(sdmaid == UINT32_MAX);
+}
+
 static int
 vhsakmt_queue_create(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_queue_req *req,
                      vHsaQueueResource **p_vqueue_res)
@@ -1215,18 +1221,28 @@ vhsakmt_queue_create(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_queue_req 
    vqueue_res->r.Queue_write_ptr_aql = req->create_queue_args.Queue_write_ptr_aql;
    vqueue_res->r.Queue_read_ptr_aql = req->create_queue_args.Queue_read_ptr_aql;
 
-   ret = hsaKmtCreateQueue(
-       req->create_queue_args.NodeId, req->create_queue_args.Type,
-       req->create_queue_args.QueuePercentage, req->create_queue_args.Priority,
-       (void *)req->create_queue_args.QueueAddress,
-       req->create_queue_args.QueueSizeInBytes, req->create_queue_args.Event,
-       &(vqueue_res->r));
+   if (vhsakmt_valid_sdmaid(req->create_queue_args.SdmaEngineId))
+      ret = hsaKmtCreateQueueExt(
+         req->create_queue_args.NodeId, req->create_queue_args.Type,
+         req->create_queue_args.QueuePercentage, req->create_queue_args.Priority,
+         req->create_queue_args.SdmaEngineId,
+         (void *)req->create_queue_args.QueueAddress,
+         req->create_queue_args.QueueSizeInBytes, req->create_queue_args.Event,
+         &(vqueue_res->r));
+   else
+      ret = hsaKmtCreateQueue(
+         req->create_queue_args.NodeId, req->create_queue_args.Type,
+         req->create_queue_args.QueuePercentage, req->create_queue_args.Priority,
+         (void *)req->create_queue_args.QueueAddress,
+         req->create_queue_args.QueueSizeInBytes, req->create_queue_args.Event,
+         &(vqueue_res->r));
 
-   vhsa_log("Create queue NodeId: %d Type: %d QueuePercentage: %d Priority: %d "
+   vhsa_log("Create queue NodeId: %d Type: %d QueuePercentage: %d Priority: %d SdmaEngineId: %d"
             "QueueAddress : 0x%lx QueueSizeInBytes: %lx Event: %p QueueResource: %p "
             "QueueId: %lx QueueId_ptr: %p ret = %d ",
             req->create_queue_args.NodeId, req->create_queue_args.Type,
             req->create_queue_args.QueuePercentage, (int)req->create_queue_args.Priority,
+            req->create_queue_args.SdmaEngineId,
             req->create_queue_args.QueueAddress, req->create_queue_args.QueueSizeInBytes,
             (void *)req->create_queue_args.Event, (void *)vqueue_res,
             vqueue_res->r.QueueId, (void *)vqueue_res->r.QueueId, ret);

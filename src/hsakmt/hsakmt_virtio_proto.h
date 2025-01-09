@@ -416,6 +416,8 @@ typedef struct _queue_req_create {
    uint32_t QueuePercentage;
    uint32_t pad;
    HSA_QUEUE_PRIORITY Priority;
+   uint32_t pad1;
+   uint32_t SdmaEngineId;
    uint64_t QueueAddress;
    uint64_t QueueSizeInBytes;
    HsaEvent *Event;
