@@ -26,3 +26,8 @@ spec@!opengl 1.1@streaming-texture-leak
 # uprev Mesa in Virglrenderer
 spec@egl_ext_protected_content@conformance
 
+# Crashed llvmpipe
+spec@glsl-1.50@execution@geometry@dynamic_input_array_index
+spec@glsl-1.50@execution@interface-blocks-api-access-members
+spec@glsl-1.50@execution@variable-indexing@vs-output-array-vec4-index-wr-before-gs
+spec@glsl-1.50@execution@variable-indexing@vs-output-array-vec3-index-wr-before-gs

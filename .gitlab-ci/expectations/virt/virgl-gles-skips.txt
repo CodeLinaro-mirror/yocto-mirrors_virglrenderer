@@ -185,3 +185,8 @@ spec@arb_texture_multisample@arb_texture_multisample-dsa-texelfetch@Texture type
 # Makes the host crash since Mesa commit 9f5af689952e9b71082e8b1ff4dec77512909fbf
 spec@arb_multi_draw_indirect@arb_draw_elements_base_vertex-multidrawelements -indirect
 spec@arb_multi_draw_indirect@gl-3.0-multidrawarrays-vertexid -indirect
+
+# Crashed llvmpipe
+spec@glsl-1.50@execution@geometry@dynamic_input_array_index
+spec@glsl-1.50@execution@variable-indexing@vs-output-array-vec4-index-wr-before-gs
+spec@glsl-1.50@execution@variable-indexing@vs-output-array-vec3-index-wr-before-gs

@@ -166,3 +166,8 @@ spec@arb_shader_image_load_store@level
 # Test uses a RGBA8 RW image and this is not supported on GLES
 spec@arb_shader_image_load_store@execution@disable_early_z
 spec@arb_texture_multisample@arb_texture_multisample-dsa-texelfetch@Texture type: GL_RGB9_E5
+
+# Crashed llvmpipe
+spec@glsl-1.50@execution@geometry@dynamic_input_array_index
+spec@glsl-1.50@execution@variable-indexing@vs-output-array-vec4-index-wr-before-gs
+spec@glsl-1.50@execution@variable-indexing@vs-output-array-vec3-index-wr-before-gs

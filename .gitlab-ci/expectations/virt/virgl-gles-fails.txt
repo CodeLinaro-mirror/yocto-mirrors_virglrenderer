@@ -7,6 +7,7 @@ dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_rbo_2,Fail
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_1,Fail
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_2,Fail
+dEQP-GLES31.functional.tessellation.shader_input_output.barrier,Fail
 dEQP-GLES31.functional.texture.border_clamp.range_clamp.linear_float_color,Fail
 
 fast_color_clear@fcc-front-buffer-distraction,ExpectedFail
@@ -230,10 +231,7 @@ spec@arb_shader_texture_lod@execution@tex-miplevel-selection *projlod 2d_projvec
 spec@arb_shader_texture_lod@execution@tex-miplevel-selection *projlod 2dshadow,Fail
 spec@arb_shader_texture_lod@execution@tex-miplevel-selection *projlod 3d,Fail
 
-spec@arb_tessellation_shader@execution@double-array-vs-tcs-tes,Fail
-spec@arb_tessellation_shader@execution@double-vs-tcs-tes,Fail
-spec@arb_tessellation_shader@execution@dvec2-vs-tcs-tes,Fail
-spec@arb_tessellation_shader@execution@dvec3-vs-tcs-tes,Fail
+spec@arb_tessellation_shader@execution@tcs-output-unmatched,Fail
 spec@arb_tessellation_shader@execution@variable-indexing@tcs-input-array-dvec4-index-rd,Fail
 spec@arb_tessellation_shader@execution@variable-indexing@tcs-output-array-dvec4-index-wr,Fail
 spec@arb_tessellation_shader@execution@variable-indexing@tcs-output-array-float-index-rd-after-barrier,Fail
@@ -3117,3 +3115,7 @@ spec@arb_copy_image@arb_copy_image-formats --samples=4,Fail
 spec@arb_copy_image@arb_copy_image-formats --samples=4@Source: GL_ALPHA/Destination: GL_ALPHA,Fail
 spec@nv_copy_image@nv_copy_image-formats --samples=2,Fail
 spec@nv_copy_image@nv_copy_image-formats --samples=2@Source: GL_ALPHA/Destination: GL_ALPHA,Fail
+
+spec@arb_framebuffer_object@execution@msaa-alpha-to-one,Fail
+spec@arb_framebuffer_object@execution@msaa-alpha-to-coverage_alpha-to-one,Fail
+spec@arb_framebuffer_object@execution@msaa-alpha-to-coverage_alpha-to-one_write-z,Fail

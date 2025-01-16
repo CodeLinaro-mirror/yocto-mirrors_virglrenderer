@@ -7,6 +7,7 @@ dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_rbo_2,Fail
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_1,Fail
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_2,Fail
+dEQP-GLES31.functional.tessellation.shader_input_output.barrier,Fail
 dEQP-GLES31.functional.texture.border_clamp.range_clamp.linear_float_color,Fail
 shaders@point-vertex-id gl_vertexid,Fail
 shaders@point-vertex-id gl_vertexid gl_instanceid divisor,Fail
@@ -222,10 +223,7 @@ spec@arb_shader_texture_lod@execution@tex-miplevel-selection *projlod 2d_projvec
 spec@arb_shader_texture_lod@execution@tex-miplevel-selection *projlod 2dshadow,Fail
 spec@arb_shader_texture_lod@execution@tex-miplevel-selection *projlod 3d,Fail
 
-spec@arb_tessellation_shader@execution@double-array-vs-tcs-tes,Fail
-spec@arb_tessellation_shader@execution@double-vs-tcs-tes,Fail
-spec@arb_tessellation_shader@execution@dvec2-vs-tcs-tes,Fail
-spec@arb_tessellation_shader@execution@dvec3-vs-tcs-tes,Fail
+spec@arb_tessellation_shader@execution@tcs-output-unmatched,Fail
 spec@arb_tessellation_shader@execution@variable-indexing@tcs-input-array-dvec4-index-rd,Fail
 spec@arb_tessellation_shader@execution@variable-indexing@tcs-output-array-dvec4-index-wr,Fail
 spec@arb_tessellation_shader@execution@variable-indexing@tcs-output-array-float-index-rd-after-barrier,Fail
@@ -3072,6 +3070,7 @@ spec@arb_texture_float@texwrap formats bordercolor-swizzled@GL_RGB16F- swizzled-
 spec@arb_texture_float@texwrap formats bordercolor@GL_RGB32F- border color only,Fail
 spec@arb_texture_float@texwrap formats bordercolor@GL_LUMINANCE_ALPHA16F_ARB- border color only,Fail
 
+
 # uprev Mesa in Virglrenderer
 spec@!opengl 1.1@depthstencil-default_fb-clear samples=2,Fail
 spec@!opengl 1.1@depthstencil-default_fb-clear samples=4,Fail
@@ -3102,3 +3101,9 @@ spec@nv_copy_image@nv_copy_image-formats --samples=4@Source: GL_ALPHA/Destinatio
 # Fails since Mesa commit 9f5af689952e9b71082e8b1ff4dec77512909fbf
 spec@arb_multi_draw_indirect@arb_draw_elements_base_vertex-multidrawelements -indirect,Crash
 spec@arb_multi_draw_indirect@gl-3.0-multidrawarrays-vertexid -indirect,Crash
+
+spec@arb_framebuffer_object@execution@msaa-alpha-to-coverage_alpha-to-one,Fail
+spec@arb_framebuffer_object@execution@msaa-alpha-to-coverage_alpha-to-one_write-z,Fail
+spec@arb_framebuffer_object@execution@msaa-alpha-to-one,Fail
+spec@glsl-1.50@execution@variable-indexing@vs-output-array-vec3-index-wr-before-gs,Crash
+spec@glsl-1.50@execution@variable-indexing@vs-output-array-vec4-index-wr-before-gs,Crash

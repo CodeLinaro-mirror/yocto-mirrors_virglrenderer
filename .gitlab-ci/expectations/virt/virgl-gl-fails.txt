@@ -17,6 +17,7 @@ dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_rbo_2,Fail
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_1,Fail
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_2,Fail
+dEQP-GLES31.functional.tessellation.shader_input_output.barrier,Fail
 dEQP-GLES31.functional.texture.border_clamp.range_clamp.linear_float_color,Fail
 dEQP-GLES3.functional.clipping.line.wide_line_clip_viewport_center,Fail
 dEQP-GLES3.functional.clipping.line.wide_line_clip_viewport_corner,Fail
@@ -509,13 +510,7 @@ spec@!opengl 2.0@vertex-program-two-side front front2 back2@gs-out and fs,Fail
 spec@!opengl 3.2@layered-rendering@clear-color-mismatched-layer-count,Fail
 spec@!opengl 1.1@line-smooth-stipple,Fail
 
-spec@arb_gl_spirv@execution@xfb@vs_two_block,Timeout
-spec@arb_gl_spirv@execution@xfb@vs_two_sets_ifc,Fail
-spec@arb_gl_spirv@execution@xfb@vs_two_sets_struct,Timeout
-spec@arb_gpu_shader5@arb_gpu_shader5-xfb-streams-without-invocations spirv,Fail
 spec@arb_gl_spirv@execution@ssbo@unsized-array,Fail
-spec@arb_gl_spirv@execution@xfb@vs_block_array,Timeout
-spec@arb_gl_spirv@execution@xfb@vs_two_sets,Timeout
 spec@arb_viewport_array@display-list,Fail
 
 fast_color_clear@fcc-front-buffer-distraction,Fail
@@ -531,4 +526,5 @@ KHR-GL31.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singles
 KHR-GL32.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singlesampled_blit,Fail
 spec@ext_image_dma_buf_import@ext_image_dma_buf_import-refcount-multithread,Fail
 spec@ext_image_dma_buf_import@ext_image_dma_buf_import-tex-modifier,Fail
-
+spec@arb_tessellation_shader@execution@tcs-output-unmatched,Fail
+spec@arb_framebuffer_object@execution@msaa-alpha-to-coverage_alpha-to-one_write-z,Fail
