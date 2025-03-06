@@ -471,9 +471,9 @@ struct vrend_linked_shader_program {
    GLuint *attrib_locs;
 
    GLuint separate_virgl_block_id[PIPE_SHADER_TYPES];
-   GLint virgl_block_bind;
+   GLuint virgl_block_bind;
    uint32_t sysvalue_data_cookie;
-   GLint ubo_sysval_buffer_id;
+   GLuint ubo_sysval_buffer_id;
 
    uint32_t images_used_mask[PIPE_SHADER_TYPES];
    GLint *img_locs[PIPE_SHADER_TYPES];
@@ -1729,7 +1729,7 @@ vrend_get_uniform_block_index(struct vrend_linked_shader_program *sprog,
 
 static inline void
 vrend_uniform_block_binding(struct vrend_linked_shader_program *sprog,
-                            int shader_type, int loc, int value)
+                            int shader_type, GLuint loc, GLuint value)
 {
     assert(!sprog->is_pipeline || sprog->ss[shader_type]->sel->sinfo.separable_program);
 
@@ -1740,8 +1740,8 @@ vrend_uniform_block_binding(struct vrend_linked_shader_program *sprog,
     glUniformBlockBinding(id, loc, value);
 }
 
-static int bind_ubo_locs(struct vrend_linked_shader_program *sprog,
-                         enum pipe_shader_type shader_type, int next_ubo_id)
+static unsigned bind_ubo_locs(struct vrend_linked_shader_program *sprog,
+                              enum pipe_shader_type shader_type, GLuint next_ubo_id)
 {
    const struct vrend_shader_info *sinfo = &sprog->ss[shader_type]->sel->sinfo;
    if (sinfo->ubo_used_mask) {
@@ -1768,7 +1768,7 @@ static int bind_ubo_locs(struct vrend_linked_shader_program *sprog,
 
 static void bind_virgl_block_loc(struct vrend_linked_shader_program *sprog,
                                  enum pipe_shader_type shader_type,
-                                 int virgl_block_ubo_id)
+                                 GLuint virgl_block_ubo_id)
 {
    sprog->separate_virgl_block_id[shader_type] =
       vrend_get_uniform_block_index(sprog, "VirglBlock", shader_type);
@@ -1776,10 +1776,10 @@ static void bind_virgl_block_loc(struct vrend_linked_shader_program *sprog,
    if (sprog->separate_virgl_block_id[shader_type] != GL_INVALID_INDEX) {
       bool created_virgl_block_buffer = false;
 
-      if (sprog->virgl_block_bind == -1) {
+      if (sprog->virgl_block_bind == GL_MAX_UNIFORM_BUFFER_BINDINGS) {
          sprog->virgl_block_bind = virgl_block_ubo_id;
-         if (sprog->ubo_sysval_buffer_id == -1) {
-             glGenBuffers(1, (GLuint *) &sprog->ubo_sysval_buffer_id);
+         if (sprog->ubo_sysval_buffer_id == 0) {
+             glGenBuffers(1, &sprog->ubo_sysval_buffer_id);
              created_virgl_block_buffer = true;
          }
       }
@@ -1808,7 +1808,7 @@ static void rebind_ubo_and_sampler_locs(struct vrend_linked_shader_program *spro
                                         enum pipe_shader_type last_shader)
 {
    int next_sampler_id = 0;
-   int next_ubo_id = 0;
+   GLuint next_ubo_id = 0;
 
    for (enum pipe_shader_type shader_type = PIPE_SHADER_VERTEX;
         shader_type <= last_shader;
@@ -1824,7 +1824,7 @@ static void rebind_ubo_and_sampler_locs(struct vrend_linked_shader_program *spro
    }
 
    /* Now `next_ubo_id` is the last ubo id, which is used for the VirglBlock. */
-   sprog->virgl_block_bind = -1;
+   sprog->virgl_block_bind = GL_MAX_UNIFORM_BUFFER_BINDINGS;
    for (enum pipe_shader_type shader_type = PIPE_SHADER_VERTEX;
         shader_type <= last_shader;
         shader_type++) {
@@ -2175,8 +2175,8 @@ static struct vrend_linked_shader_program *add_shader_program(struct vrend_sub_c
 
    list_addtail(&sprog->head, &sub_ctx->gl_programs[vs->id & VREND_PROGRAM_NQUEUE_MASK]);
 
-   sprog->virgl_block_bind = -1;
-   sprog->ubo_sysval_buffer_id = -1;
+   sprog->virgl_block_bind = GL_MAX_UNIFORM_BUFFER_BINDINGS;
+   sprog->ubo_sysval_buffer_id = 0;
    sprog->sysvalue_data_cookie = UINT32_MAX;
 
    vrend_use_program(sub_ctx, sprog);
@@ -2266,8 +2266,8 @@ static void vrend_destroy_program(struct vrend_linked_shader_program *ent)
    if (ent->ref_context && ent->ref_context->prog == ent)
       ent->ref_context->prog = NULL;
 
-   if (ent->ubo_sysval_buffer_id != -1) {
-       glDeleteBuffers(1, (GLuint *) &ent->ubo_sysval_buffer_id);
+   if (ent->ubo_sysval_buffer_id != 0) {
+       glDeleteBuffers(1, &ent->ubo_sysval_buffer_id);
    }
 
    if (ent->is_pipeline)
@@ -5343,7 +5343,7 @@ static int vrend_draw_bind_samplers_shader(struct vrend_sub_context *sub_ctx,
 }
 
 static int vrend_draw_bind_ubo_shader(struct vrend_sub_context *sub_ctx,
-                                      int shader_type, int next_ubo_id)
+                                      int shader_type, unsigned next_ubo_id)
 {
    uint32_t mask, dirty, update;
    struct pipe_constant_buffer *cb;
@@ -5577,7 +5577,7 @@ static void vrend_draw_bind_images_shader(struct vrend_sub_context *sub_ctx, int
 static void
 vrend_fill_sysval_uniform_block (struct vrend_sub_context *sub_ctx)
 {
-   if (sub_ctx->prog->virgl_block_bind == -1)
+   if (sub_ctx->prog->virgl_block_bind == GL_MAX_UNIFORM_BUFFER_BINDINGS)
       return;
 
    if (sub_ctx->sysvalue_data_cookie != sub_ctx->prog->sysvalue_data_cookie) {
@@ -5612,7 +5612,7 @@ static void vrend_draw_bind_objects(struct vrend_sub_context *sub_ctx, bool new_
       }
    }
 
-   if (sub_ctx->prog->virgl_block_bind != -1)
+   if (sub_ctx->prog->virgl_block_bind != GL_MAX_UNIFORM_BUFFER_BINDINGS)
       glBindBufferRange(GL_UNIFORM_BUFFER, sub_ctx->prog->virgl_block_bind,
                         sub_ctx->prog->ubo_sysval_buffer_id,
                         0, sizeof(struct sysval_uniform_block));
