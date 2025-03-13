@@ -379,7 +379,7 @@ static GLuint blit_get_frag_tex_writedepth(struct vrend_blitter_ctx *blit_ctx, e
       void *shader = _mesa_hash_table_u64_search(blit_ctx->blit_programs, prog_key_to_uint64(key));
       GLuint prog_id;
       if (shader) {
-         prog_id = (GLuint)((size_t)(shader) & 0xffffffff);
+         prog_id = pointer_to_uintptr(shader);
       } else {
          prog_id = glCreateProgram();
          glAttachShader(prog_id, blit_ctx->vs);
@@ -390,7 +390,7 @@ static GLuint blit_get_frag_tex_writedepth(struct vrend_blitter_ctx *blit_ctx, e
             return 0;
 
          glDeleteShader(fs_id);
-         _mesa_hash_table_u64_insert(blit_ctx->blit_programs, prog_key_to_uint64(key), (void *)(uintptr_t)prog_id);
+         _mesa_hash_table_u64_insert(blit_ctx->blit_programs, prog_key_to_uint64(key), uintptr_to_pointer(prog_id));
       }
       return prog_id;
 }
@@ -432,7 +432,7 @@ static GLuint blit_get_frag_tex_col(struct vrend_blitter_ctx *blit_ctx,
    void *shader = _mesa_hash_table_u64_search(blit_ctx->blit_programs, prog_key_to_uint64(key));
 
    if (shader) {
-      prog_id = (GLuint)((size_t)(shader) & 0xffffffff);
+      prog_id = pointer_to_uintptr(shader);
    } else {
       prog_id = glCreateProgram();
       glAttachShader(prog_id, blit_ctx->vs);
@@ -447,7 +447,7 @@ static GLuint blit_get_frag_tex_col(struct vrend_blitter_ctx *blit_ctx,
          return 0;
 
       glDeleteShader(fs_id);
-      _mesa_hash_table_u64_insert(blit_ctx->blit_programs, prog_key_to_uint64(key), (void *)(uintptr_t)prog_id);
+      _mesa_hash_table_u64_insert(blit_ctx->blit_programs, prog_key_to_uint64(key), uintptr_to_pointer(prog_id));
    }
 
    return prog_id;
@@ -908,7 +908,7 @@ void vrend_renderer_blit_gl(ASSERTED struct vrend_context *ctx,
 
 static void delete_program_cb(struct hash_entry *entry)
 {
-   glDeleteProgram((GLuint)pointer_to_uintptr(entry->data));
+   glDeleteProgram(pointer_to_uintptr(entry->data));
 }
 
 void vrend_blitter_fini(void)
