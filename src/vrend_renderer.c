@@ -499,7 +499,6 @@ struct vrend_shader {
    GLuint id;
    GLuint program_id; /* only used for separable shaders */
    GLuint last_pipeline_id;
-   uint32_t uid;
    bool is_compiled;
    bool is_linked; /* only used for separable shaders */
    struct vrend_shader_key key;
@@ -4360,10 +4359,6 @@ static int vrend_shader_create(struct vrend_context *ctx,
                                struct vrend_shader *shader,
                                struct vrend_shader_key *key)
 {
-   static uint32_t uid;
-
-   shader->uid = ++uid;
-
    if (shader->sel->tokens) {
 
       VREND_DEBUG(dbg_shader_tgsi, ctx, "TGSI received:");
