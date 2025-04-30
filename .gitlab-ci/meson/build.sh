@@ -70,7 +70,7 @@ meson setup _build --native-file=native.file \
     -D cpp_args="$(echo -n $CPP_ARGS)" \
     ${DRI_LOADERS} \
     ${GALLIUM_ST} \
-    -D tests=true \
+    -D tests=${ENABLE_TESTS:-true} \
     -D render-server=true \
     -D render-server-worker=process \
     -D venus=true \
