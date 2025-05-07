@@ -67,6 +67,9 @@ static struct vhsakmt_backend backend = {
     .hsakmt_mutex = PTHREAD_MUTEX_INITIALIZER,
 };
 
+static void
+vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj);
+
 static inline struct vhsakmt_backend *vhsakmt_backend(void) { return &backend; }
 
 static inline uint64_t vhsakmt_queue_page_size() { return getpagesize(); }
@@ -174,6 +177,15 @@ vhsakmt_free_scratch_map_mem(struct vhsakmt_context *ctx, struct vhsakmt_object 
    return vhsakmt_gpu_unmap(obj);
 }
 
+static bool
+vhsakmt_queue_mem_obj_can_remove(struct vhsakmt_object *obj)
+{
+   if (obj->type != VHSAKMT_OBJ_QUEUE_MEM)
+      return false;
+
+   return (obj->queue_obj == NULL) && obj->guest_removed;
+}
+
 static int
 vhsakmt_free_scratch_reserve_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
@@ -205,8 +217,15 @@ vhsakmt_is_scratch_obj(struct vhsakmt_object *obj)
 static int
 vhsakmt_free_host_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
-   if (!obj || (obj->type != VHSAKMT_OBJ_HOST_MEM && obj->type != VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR))
+   if (!obj || (obj->type != VHSAKMT_OBJ_HOST_MEM && obj->type != VHSAKMT_OBJ_QUEUE_MEM))
       return -EINVAL;
+
+   if (obj->type == VHSAKMT_OBJ_QUEUE_MEM) {
+      if (!vhsakmt_queue_mem_obj_can_remove(obj)) {
+         vhsa_dbg("queue mem obj remove skipped, res_id: %d, addr: %p", obj->base.res_id, obj->bo);
+         return -EINVAL;
+      }
+   }
 
    /* For shmem */
    if (obj->fd && obj->base.blob_id == 0) {
@@ -253,39 +272,18 @@ vhsakmt_free_event_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_object
 }
 
 static void
-vhsakmt_free_aql_rw_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
-{
-   if (!obj || obj->type != VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR)
-      return;
-
-   vhsa_log("Free %s memory: %p, size: %lx, res id: %d", vhsakmt_object_type_name(obj->type), obj->bo,
-            obj->base.size, obj->base.res_id);
-   vhsakmt_free_host_mem(ctx, obj);
-}
-
-static bool
-vhsakmt_aql_rw_mem_can_free(struct vhsakmt_object *obj)
-{
-   if (obj->type != VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR)
-      return false;
-
-   /* Only when AQL queue freed and virtgpu obj freed in guest side then AQL rw
-    * bo can be free. */
-   return (obj->aql_queue == NULL) && obj->guest_removed;
-}
-
-static void
 vhsakmt_free_queue_obj(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    hsaKmtDestroyQueue(obj->queue->r.QueueId);
 
-   if (obj->aql_rw_mem) {
-      obj->aql_rw_mem->aql_queue = NULL;
-      if (vhsakmt_aql_rw_mem_can_free(obj->aql_rw_mem)) {
-         vhsakmt_free_aql_rw_mem(ctx, obj->aql_rw_mem);
-         free(obj->aql_rw_mem);
-         obj->aql_rw_mem = NULL;
-      }
+   if (obj->queue_rw_mem) {
+      obj->queue_rw_mem->queue_obj = NULL;
+      vhsakmt_free_object(&ctx->base, &obj->queue_rw_mem->base);
+   }
+
+   if (obj->queue_mem) {
+      obj->queue_mem->queue_obj = NULL;
+      vhsakmt_free_object(&ctx->base, &obj->queue_mem->base);
    }
 
    free(obj->queue);
@@ -305,34 +303,28 @@ vhsakmt_free_dmabuf_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_objec
    obj->fd = -1;
 }
 
+static void vhsakmt_context_remove_object(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
+{
+   if (vhsakmt_context_res_id_unused(ctx, obj->base.res_id))
+      return;
+
+   _mesa_hash_table_remove_key(ctx->base.resource_table, (void *)(uintptr_t)obj->base.res_id);
+}
+
 static void
 vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
    struct vhsakmt_object *obj = to_vhsakmt_object(bobj);
-
-   if (obj->type == VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR) {
-      obj->guest_removed = true;
-
-      if (vhsakmt_aql_rw_mem_can_free(obj)) {
-         vhsakmt_free_aql_rw_mem(ctx, obj);
-         goto out_free;
-      } else {
-         /* Skip aql r/w memory free, let it be free in queue object free function */
-         vhsa_dbg("Skip free obj: %p, type: %s, res_id: %d, address: %p, AQL queue: %lx",
-                  (void *)obj, vhsakmt_object_type_name(obj->type), obj->base.res_id,
-                  obj->bo, obj->aql_queue->queue->r.QueueId);
-         return;
-      }
-   }
+   int ret = 0;
 
    switch (obj->type) {
    case VHSAKMT_OBJ_USERPTR:
-      vhsakmt_free_userptr(obj);
+      ret = vhsakmt_free_userptr(obj);
       break;
 
    case VHSAKMT_OBJ_HOST_MEM:
-      vhsakmt_free_host_mem(ctx, obj);
+      ret = vhsakmt_free_host_mem(ctx, obj);
       break;
 
    case VHSAKMT_OBJ_DOORBELL_RW_PTR:
@@ -349,11 +341,15 @@ vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_objec
       break;
 
    case VHSAKMT_OBJ_SCRATCH_MAP_MEM:
-      vhsakmt_free_scratch_map_mem(ctx, obj);
+      ret = vhsakmt_free_scratch_map_mem(ctx, obj);
       break;
 
    case VHSAKMT_OBJ_DMA_BUF:
       vhsakmt_free_dmabuf_obj(ctx, obj);
+      break;
+
+   case VHSAKMT_OBJ_QUEUE_MEM:
+      ret = vhsakmt_free_host_mem(ctx, obj);
       break;
 
    default:
@@ -361,10 +357,33 @@ vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_objec
       break;
    }
 
-out_free:
+   if (ret) {
+      vhsa_dbg("Failed to free object: %p, type: %s, res_id: %d, address: %p",
+               (void *)obj, vhsakmt_object_type_name(obj->type), obj->base.res_id,
+               obj->bo);
+      return;
+   }
+
    vhsa_dbg("Free obj: %p, type: %s, res_id: %d, address: %p", (void *)obj,
             vhsakmt_object_type_name(obj->type), obj->base.res_id, obj->bo);
+   vhsakmt_context_remove_object(ctx, obj);
    free(obj);
+}
+
+static void
+vhsakmt_device_detach_resource(struct virgl_context *vctx,
+                               struct virgl_resource *res)
+{
+   struct vhsakmt_context *ctx = to_vhsakmt_context(to_drm_context(vctx));
+   struct vhsakmt_object *obj = vhsakmt_context_get_object_from_res_id(ctx, res->res_id);
+
+   if (!obj)
+      return;
+
+   if (obj->type == VHSAKMT_OBJ_QUEUE_MEM)
+      obj->guest_removed = true;
+
+   vhsakmt_free_object(&ctx->base, &obj->base);
 }
 
 static void
@@ -1199,19 +1218,50 @@ vhsakmt_valid_sdmaid(uint32_t sdmaid)
 }
 
 static int
+vhsakmt_queue_mem_convert(struct vhsakmt_context *ctx, uint32_t res_id, struct vhsakmt_object *queue_obj,
+                                     bool is_rw_mem)
+{
+   int ret = 0;
+   struct vhsakmt_object *mem_obj = NULL;
+
+   if (!queue_obj) {
+      vhsa_err("Invalid queue object");
+      return -EINVAL;
+   }
+
+   mem_obj = vhsakmt_context_get_object_from_res_id(ctx, res_id);
+   if (!mem_obj) {
+      vhsa_err("Can not find queue memory bo, res_id: %d", res_id);
+      return -EINVAL;
+   }
+
+   mem_obj->type = VHSAKMT_OBJ_QUEUE_MEM;
+   mem_obj->queue_obj = queue_obj;
+   if (is_rw_mem)
+      queue_obj->queue_rw_mem = mem_obj;
+   else
+      queue_obj->queue_mem = mem_obj;
+   vhsa_log("Change res: %d, address: %p, size: %lx to %s", res_id, mem_obj->bo, mem_obj->base.size,
+            is_rw_mem ? "rw mem" : "queue mem");
+
+   return ret;
+}
+
+static int
 vhsakmt_queue_create(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_queue_req *req,
                      vHsaQueueResource **p_vqueue_res)
 {
    int ret = 0;
-   struct vhsakmt_object *aql_rw_mem_obj = NULL;
+   struct vhsakmt_object *queue_obj;
+   vHsaQueueResource *vqueue_res;
    struct vhsakmt_node *node =
-       vhsakmt_get_node(vhsakmt_backend(), req->create_queue_args.NodeId);
+      vhsakmt_get_node(vhsakmt_backend(), req->create_queue_args.NodeId);
    if (!node) {
       vhsa_err("Invalid node %d", req->create_queue_args.NodeId);
       return HSAKMT_STATUS_INVALID_NODE_UNIT;
    }
 
-   vHsaQueueResource *vqueue_res = calloc(1, sizeof(vHsaQueueResource));
+   vqueue_res = calloc(1, sizeof(vHsaQueueResource));
    if (!vqueue_res) {
       vhsa_err("vhsakmt_ccmd_queue calloc failed");
       return -ENOMEM;
@@ -1289,27 +1339,26 @@ vhsakmt_queue_create(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_queue_req 
       }
    }
 
-   /* For AQL queue rw BO tpye change */
-   if (req->create_queue_args.Type == HSA_QUEUE_COMPUTE_AQL && req->res_id) {
-      aql_rw_mem_obj = vhsakmt_context_get_object_from_res_id(ctx, req->res_id);
-      if (aql_rw_mem_obj) {
-         aql_rw_mem_obj->type = VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR;
-         vhsa_log("Change res: %d, address: %p, size: %lx to AQL rw ptr type",
-                  req->res_id, aql_rw_mem_obj->bo, aql_rw_mem_obj->base.size);
-      } else {
-         vhsa_err("Can not find AQL rw BO res_id %d", req->res_id);
-         goto out_destroy_queue;
-      }
+   queue_obj = vhsakmt_object_create((void *)vqueue_res, 0, sizeof(*vqueue_res), VHSAKMT_OBJ_QUEUE);
+   if (!queue_obj) {
+      vhsa_err("Create queue object failed");
+      ret = -ENOMEM;
+      goto out_destroy_queue;
    }
 
-   struct vhsakmt_object *queue_obj = vhsakmt_object_create(
-       (void *)vqueue_res, 0, sizeof(*vqueue_res), VHSAKMT_OBJ_QUEUE);
    queue_obj->queue = vqueue_res;
    vhsakmt_context_object_set_blob_id(ctx, queue_obj, req->blob_id);
 
-   if (req->create_queue_args.Type == HSA_QUEUE_COMPUTE_AQL && aql_rw_mem_obj) {
-      queue_obj->aql_rw_mem = aql_rw_mem_obj;
-      aql_rw_mem_obj->aql_queue = queue_obj;
+   if (req->create_queue_args.Type == HSA_QUEUE_COMPUTE_AQL && req->res_id) {
+      ret = vhsakmt_queue_mem_convert(ctx, req->res_id, queue_obj, true);
+      if (ret) 
+         goto out_destroy_queue;
+   }
+
+   if (req->queue_mem_res_id) {
+      ret = vhsakmt_queue_mem_convert(ctx, req->queue_mem_res_id, queue_obj, false);
+      if (ret)
+         goto out_destroy_queue;
    }
 
    *p_vqueue_res = vqueue_res;
@@ -1688,6 +1737,8 @@ hsakmt_device_create(UNUSED size_t debug_len, UNUSED const char *debug_name)
    ctx->base.base.get_blob = vhsakmt_device_get_blob;
    ctx->base.base.submit_fence = vhsakmt_device_submit_fence;
    ctx->base.free_object = vhsakmt_free_object;
+   /* must use private detach cause some resource free need delay */
+   ctx->base.base.detach_resource = vhsakmt_device_detach_resource;
 
    return &ctx->base.base;
 }

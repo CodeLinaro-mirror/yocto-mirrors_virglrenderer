@@ -62,7 +62,7 @@ typedef enum vhsakmt_object_type {
    VHSAKMT_OBJ_QUEUE,
    VHSAKMT_OBJ_DOORBELL_PTR,
    VHSAKMT_OBJ_DOORBELL_RW_PTR,
-   VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR,
+   VHSAKMT_OBJ_QUEUE_MEM,
    VHSAKMT_OBJ_DMA_BUF,
    VHSAKMT_OBJ_SCRATCH_MAP_MEM,
    VHSAKMT_OBJ_TYPE_MAX,
@@ -76,7 +76,7 @@ static char *__obj_names[] = {
     "VHSAKMT_OBJ_QUEUE",
     "VHSAKMT_OBJ_DOORBELL_PTR",
     "VHSAKMT_OBJ_DOORBELL_RW_PTR",
-    "VHSAKMT_OBJ_AQL_DOORBELL_RW_PTR",
+    "VHSAKMT_OBJ_QUEUE_MEM",
     "VHSAKMT_OBJ_DMA_BUF",
     "VHSAKMT_OBJ_SCRATCH_MAP_MEM",
     "VHSAKMT_OBJ_TYPE_MAX",
@@ -108,8 +108,9 @@ struct vhsakmt_object {
    int fd;
 
    vHsaQueueResource *queue;
-   struct vhsakmt_object *aql_rw_mem;
-   struct vhsakmt_object *aql_queue;
+   struct vhsakmt_object *queue_obj;
+   struct vhsakmt_object *queue_rw_mem;
+   struct vhsakmt_object *queue_mem;
 
    unsigned vm_flags;
    vhsakmt_object_type_t type;

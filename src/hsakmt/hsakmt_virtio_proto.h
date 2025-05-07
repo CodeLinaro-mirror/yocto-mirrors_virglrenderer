@@ -435,10 +435,11 @@ struct vhsakmt_ccmd_queue_req {
    };
    uint64_t blob_id;        /* For queue create, queue resource */
    uint64_t rw_ptr_blob_id; /* For queue create, r/w ptr memory mapping */
-   uint64_t
-       doorbell_blob_id; /* For queue create, doorbell ptr memory mapping */
+   uint64_t doorbell_blob_id; /* For queue create, doorbell ptr memory mapping */
    uint32_t res_id;
    uint32_t type;
+   uint32_t queue_mem_res_id;
+   uint32_t pad;
    uint8_t payload[];
 };
 VHSAKMT_STATIC_ASSERT_SIZE(vhsakmt_ccmd_queue_req)
