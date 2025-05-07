@@ -9,7 +9,7 @@
       if (level >= ctx->debug) {                                               \
          unsigned c = (unsigned)((uintptr_t)ctx >> 8) % 256;                   \
          printf("\033[0;38;5;%dm", c);                                         \
-         printf("[%s] %s: " fmt, ctx->debug_name, __func__,           \
+         printf("[%s]:" fmt, ctx->debug_name,                                  \
                 ##__VA_ARGS__);                                                \
          printf("\033[0m");                                                    \
       }                                                                        \
