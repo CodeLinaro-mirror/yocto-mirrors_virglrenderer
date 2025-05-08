@@ -50,7 +50,7 @@ static struct vhsakmt_backend backend = {
     .hsakmt_mutex = PTHREAD_MUTEX_INITIALIZER,
 };
 
-inline struct vhsakmt_backend *vhsakmt_backend(void) { return &backend; }
+inline struct vhsakmt_backend *vhsakmt_device_backend(void) { return &backend; }
 
 static inline bool
 vhsakmt_device_is_gpu_node(struct vhsakmt_node *n)
@@ -174,13 +174,13 @@ vhsakmt_device_destroy(struct virgl_context *vctx)
 
    vhsakmt_context_deinit(ctx);
 
-   hsakmt_free_from_vamgr(&vhsakmt_backend()->vamgr, ctx->vamgr.vm_va_base_addr);
+   hsakmt_free_from_vamgr(&vhsakmt_device_backend()->vamgr, ctx->vamgr.vm_va_base_addr);
 
-   for (i = 0; i < vhsakmt_backend()->vhsakmt_num_nodes; i++)
+   for (i = 0; i < vhsakmt_device_backend()->vhsakmt_num_nodes; i++)
    {
-      if (vhsakmt_device_is_gpu_node(&vhsakmt_backend()->vhsakmt_nodes[i]))
-         hsakmt_free_from_vamgr(&vhsakmt_backend()->vhsakmt_nodes[i].scratch_vamgr,
-            (uint64_t)vhsakmt_backend()->vhsakmt_nodes[i].scratch_base);
+      if (vhsakmt_device_is_gpu_node(&vhsakmt_device_backend()->vhsakmt_nodes[i]))
+         hsakmt_free_from_vamgr(&vhsakmt_device_backend()->vhsakmt_nodes[i].scratch_vamgr,
+            (uint64_t)vhsakmt_device_backend()->vhsakmt_nodes[i].scratch_base);
    }
 
    free((void *)ctx->debug_name);
@@ -388,16 +388,16 @@ vhsakmt_device_vm_init(struct vhsakmt_backend *b)
    }
 
    /* set expected doorbell address */
-   if (vhsakmt_backend()->vamgr_vm_base_addr_type == VHSA_VAMGR_VM_TYPE_FIXED_BASE)
-      vhsakmt_backend()->expected_doorbell_base_addr =
-          vhsakmt_backend()->vamgr_vm_fixed_base_addr;
+   if (vhsakmt_device_backend()->vamgr_vm_base_addr_type == VHSA_VAMGR_VM_TYPE_FIXED_BASE)
+      vhsakmt_device_backend()->expected_doorbell_base_addr =
+          vhsakmt_device_backend()->vamgr_vm_fixed_base_addr;
    else
-      vhsakmt_backend()->expected_doorbell_base_addr =
+      vhsakmt_device_backend()->expected_doorbell_base_addr =
           (vm_base_addr + b->vamgr_vm_kfd_size + b->vamgr_vm_scratch_size);
 
-   if (hsaKmtSetDoorbellAddr((void *)vhsakmt_backend()->expected_doorbell_base_addr))
+   if (hsaKmtSetDoorbellAddr((void *)vhsakmt_device_backend()->expected_doorbell_base_addr))
       fprintf(stderr, "Set expected doorbell address: 0x%lx failed.\n",
-              vhsakmt_backend()->expected_doorbell_base_addr);
+              vhsakmt_device_backend()->expected_doorbell_base_addr);
 #endif
 
    if (vhsakmt_init_vamgr(&b->vamgr, vm_base_addr, b->vamgr_vm_kfd_size)) {
@@ -478,11 +478,11 @@ vhsakmt_device_init(void)
    ret = hsaKmtGetVersion(&info);
    if (ret) {
       fprintf(stderr, "Get KFD version failed.\n");
-      vhsakmt_backend()->hsakmt_capset.version_major = 1;
-      vhsakmt_backend()->hsakmt_capset.version_minor = 0;
+      vhsakmt_device_backend()->hsakmt_capset.version_major = 1;
+      vhsakmt_device_backend()->hsakmt_capset.version_minor = 0;
    } else {
-      vhsakmt_backend()->hsakmt_capset.version_major = info.KernelInterfaceMajorVersion;
-      vhsakmt_backend()->hsakmt_capset.version_minor = info.KernelInterfaceMinorVersion;
+      vhsakmt_device_backend()->hsakmt_capset.version_major = info.KernelInterfaceMajorVersion;
+      vhsakmt_device_backend()->hsakmt_capset.version_minor = info.KernelInterfaceMinorVersion;
    }
 
     ret = vhsakmt_device_get_nodes_properties(&backend);
@@ -501,7 +501,7 @@ vhsakmt_device_init(void)
    if (d)
       dump_va = atoi(d);
 
-   hsakmt_set_dump_va(&vhsakmt_backend()->vamgr, dump_va);
+   hsakmt_set_dump_va(&vhsakmt_device_backend()->vamgr, dump_va);
 
    return 0;
 }
@@ -521,13 +521,13 @@ void
 vhsakmt_device_fini(void)
 {
 #ifdef HSAKMT_VIRTIO
-   vhsakmt_dereserve_va(vhsakmt_backend()->vamgr.vm_va_base_addr,
-                        vhsakmt_backend()->vamgr.reserve_size +
-                            vhsakmt_backend()->scratch_vamgr.reserve_size);
+   vhsakmt_dereserve_va(vhsakmt_device_backend()->vamgr.vm_va_base_addr,
+                        vhsakmt_device_backend()->vamgr.reserve_size +
+                            vhsakmt_device_backend()->scratch_vamgr.reserve_size);
 #endif
 
-   vhsakmt_destroy_vamgr(&vhsakmt_backend()->vamgr);
-   vhsakmt_device_destroy_scratch_vamgr(vhsakmt_backend());
+   vhsakmt_destroy_vamgr(&vhsakmt_device_backend()->vamgr);
+   vhsakmt_device_destroy_scratch_vamgr(vhsakmt_device_backend());
 
    hsaKmtReleaseSystemProperties();
    hsaKmtCloseKFD();
@@ -541,7 +541,7 @@ vhsakmt_device_get_capset(UNUSED uint32_t set, UNUSED void *caps)
    struct virgl_renderer_capset_hsakmt *c = caps;
 
    if (c)
-      *c = vhsakmt_backend()->hsakmt_capset;
+      *c = vhsakmt_device_backend()->hsakmt_capset;
 
    return sizeof(*c);
 }
@@ -567,7 +567,7 @@ hsakmt_device_create(UNUSED size_t debug_len, UNUSED const char *debug_name)
       ctx->debug = atoi(d);
 
    va_start_addr =
-       hsakmt_alloc_from_vamgr(&vhsakmt_backend()->vamgr, VHSA_CTX_RESERVE_SIZE);
+       hsakmt_alloc_from_vamgr(&vhsakmt_device_backend()->vamgr, VHSA_CTX_RESERVE_SIZE);
    if (!va_start_addr) {
       fprintf(stderr, "Can not alloc from vamgr size: %lx",
               VHSA_CTX_RESERVE_SIZE);

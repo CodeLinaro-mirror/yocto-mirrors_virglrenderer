@@ -18,14 +18,14 @@ vhsakmt_doorbell_page_size(uint32_t gfxv)
 static void
 vhsakmt_queue_init_node_doorbell(struct vhsakmt_node *node, uint64_t doorbell_base_addr)
 {
-   pthread_mutex_lock(&vhsakmt_backend()->hsakmt_mutex);
+   pthread_mutex_lock(&vhsakmt_device_backend()->hsakmt_mutex);
    if (node->doorbell_base_addr)
       goto out_unlock;
 
    node->doorbell_base_addr = (void *)ROUND_DOWN_TO(doorbell_base_addr, getpagesize());
 
 out_unlock:
-   pthread_mutex_unlock(&vhsakmt_backend()->hsakmt_mutex);
+   pthread_mutex_unlock(&vhsakmt_device_backend()->hsakmt_mutex);
    return;
 }
 
@@ -113,7 +113,7 @@ vhsakmt_queue_create(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_queue_req 
    struct vhsakmt_object *queue_obj;
    vHsaQueueResource *vqueue_res;
    struct vhsakmt_node *node =
-      vhsakmt_get_node(vhsakmt_backend(), req->create_queue_args.NodeId);
+      vhsakmt_get_node(vhsakmt_device_backend(), req->create_queue_args.NodeId);
    if (!node) {
       vhsa_err("Invalid node %d", req->create_queue_args.NodeId);
       return HSAKMT_STATUS_INVALID_NODE_UNIT;

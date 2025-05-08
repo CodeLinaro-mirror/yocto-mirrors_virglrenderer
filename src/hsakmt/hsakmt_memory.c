@@ -41,9 +41,9 @@ vhsakmt_free_scratch_reserve_mem(struct vhsakmt_context *ctx, struct vhsakmt_obj
 {
     uint32_t i;
 
-    for (i = 0; i < vhsakmt_backend()->vhsakmt_num_nodes; i++)
+    for (i = 0; i < vhsakmt_device_backend()->vhsakmt_num_nodes; i++)
     {
-        struct vhsakmt_node *node = &vhsakmt_backend()->vhsakmt_nodes[i];
+        struct vhsakmt_node *node = &vhsakmt_device_backend()->vhsakmt_nodes[i];
         if (obj->bo >= (void*)node->scratch_vamgr.vm_va_base_addr && obj->bo < (void*)node->scratch_vamgr.vm_va_high_addr)
         {
             vhsa_log("free scratch reserve memory in node[%d]: %p, size: %lx", i, obj->bo, obj->base.size);
@@ -179,7 +179,7 @@ vhsakmt_alloc_scratch(struct vhsakmt_context *ctx,
    void *mem;
 
    struct vhsakmt_node *node =
-       vhsakmt_get_node(vhsakmt_backend(), req->alloc_args.PreferredNode);
+       vhsakmt_get_node(vhsakmt_device_backend(), req->alloc_args.PreferredNode);
    if (!node) {
       vhsa_err("Invalid node %d", req->alloc_args.PreferredNode);
       return HSAKMT_STATUS_INVALID_NODE_UNIT;
@@ -187,7 +187,7 @@ vhsakmt_alloc_scratch(struct vhsakmt_context *ctx,
 
    /* Scratch area lazy init */
    if (!node->scratch_base) {
-      ret = vhsakmt_scratch_init(ctx, node, req, vhsakmt_backend());
+      ret = vhsakmt_scratch_init(ctx, node, req, vhsakmt_device_backend());
       if (ret)
          return ret;
    }
