@@ -1,6 +1,125 @@
 #include "hsakmt_memory.h"
 #include "util/hsakmt_util.h"
 
+int
+vhsakmt_gpu_unmap(struct vhsakmt_object *obj)
+{
+   return hsaKmtUnmapMemoryToGPU(obj->bo);
+}
+
+int
+vhsakmt_free_userptr(UNUSED struct vhsakmt_object *obj)
+{
+   if (!obj || obj->type != VHSAKMT_OBJ_USERPTR)
+      return -EINVAL;
+
+   /* userptr do not need unmap and deregister, cause they are totally managed
+    * by kernel */
+   return 0;
+}
+
+/* there are two kinds of scratch memory
+   the scratch reserve area memory, it is a virtual memory area, not real
+   memory, the type is VHSAKMT_OBJ_HOST_MEM, will be free vamgr area in
+   vhsakmt_free_host_mem. the second type scratch memory is real alloc memory,
+   they are alloced in map to GPU, and need be free in here, otherwise map same
+   scratch address will return error.
+*/
+int
+vhsakmt_free_scratch_map_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
+{
+   if (!obj || obj->type != VHSAKMT_OBJ_SCRATCH_MAP_MEM)
+      return -EINVAL;
+
+   vhsa_log("free scratch memory: %p, size: %lx", obj->bo, obj->base.size);
+
+   return vhsakmt_gpu_unmap(obj);
+}
+
+int
+vhsakmt_free_scratch_reserve_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
+{
+    uint32_t i;
+
+    for (i = 0; i < vhsakmt_backend()->vhsakmt_num_nodes; i++)
+    {
+        struct vhsakmt_node *node = &vhsakmt_backend()->vhsakmt_nodes[i];
+        if (obj->bo >= (void*)node->scratch_vamgr.vm_va_base_addr && obj->bo < (void*)node->scratch_vamgr.vm_va_high_addr)
+        {
+            vhsa_log("free scratch reserve memory in node[%d]: %p, size: %lx", i, obj->bo, obj->base.size);
+            hsakmt_free_from_vamgr(&node->scratch_vamgr, (uint64_t)obj->bo);
+            break;
+        }
+    }
+
+    return 0;
+}
+
+static inline bool
+vhsakmt_is_scratch_obj(struct vhsakmt_object *obj)
+{
+   if (!obj)
+      return false;
+
+   return ((HsaMemFlags *)&obj->flags)->ui32.Scratch;
+}
+
+static bool
+vhsakmt_queue_mem_obj_can_remove(struct vhsakmt_object *obj)
+{
+   if (obj->type != VHSAKMT_OBJ_QUEUE_MEM)
+      return false;
+
+   return (obj->queue_obj == NULL) && obj->guest_removed;
+}
+
+int
+vhsakmt_free_host_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
+{
+   if (!obj || (obj->type != VHSAKMT_OBJ_HOST_MEM && obj->type != VHSAKMT_OBJ_QUEUE_MEM))
+      return -EINVAL;
+
+   if (obj->type == VHSAKMT_OBJ_QUEUE_MEM) {
+      if (!vhsakmt_queue_mem_obj_can_remove(obj)) {
+         vhsa_dbg("queue mem obj remove skipped, res_id: %d, addr: %p", obj->base.res_id, obj->bo);
+         return -EINVAL;
+      }
+   }
+
+   /* For shmem */
+   if (obj->fd && obj->base.blob_id == 0) {
+      if (obj->bo) {
+        munmap(obj->bo, obj->base.size);
+        obj->bo = NULL;
+        obj->base.size = 0;
+      }
+
+      close(obj->fd);
+      obj->fd = -1;
+      return 0;
+   }
+
+   if (vhsakmt_is_scratch_obj(obj))
+      vhsakmt_free_scratch_reserve_mem(ctx, obj);
+   else {
+      vhsakmt_gpu_unmap(obj);
+      hsaKmtFreeMemory(obj->bo, obj->base.size);
+
+#ifdef HSAKMT_VIRTIO
+      if (vhsakmt_reserve_va((uint64_t)obj->bo, obj->base.size))
+         vhsa_err("Reserve address: %p size: 0x%x failed when free.", obj->bo,
+                  obj->base.size);
+#endif
+
+      if (hsakmt_free_from_vamgr(&ctx->vamgr, (uint64_t)obj->bo)) {
+         vhsa_err("Failed to free memory form vamgr, address: %p", obj->bo);
+         return -EINVAL;
+      }
+   }
+
+   return 0;
+}
+
 static int
 vhsakmt_scratch_init(struct vhsakmt_context *ctx, struct vhsakmt_node *node,
                           struct vhsakmt_ccmd_memory_req *req, struct vhsakmt_backend *b)
