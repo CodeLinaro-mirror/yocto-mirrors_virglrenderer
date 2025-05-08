@@ -21,6 +21,11 @@
  */
 
 #include "hsakmt_context.h"
+#include "hsakmt_query.h"
+#include "hsakmt_events.h"
+#include "hsakmt_memory.h"
+#include "hsakmt_queues.h"
+#include "util/hsakmt_util.h"
 
 bool vhsakmt_context_init(struct vhsakmt_context *ctx, int fd,
                           const struct vhsakmt_ccmd *ccmd_dispatch,
@@ -121,11 +126,70 @@ vhsakmt_context_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t 
    return obj;
 }
 
-void
+static void
 vhsakmt_context_remove_object(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    if (vhsakmt_context_res_id_unused(ctx, obj->base.res_id))
       return;
 
    _mesa_hash_table_remove_key(ctx->base.resource_table, (void *)(uintptr_t)obj->base.res_id);
+}
+
+void
+vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj)
+{
+   struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
+   struct vhsakmt_object *obj = to_vhsakmt_object(bobj);
+   int ret = 0;
+
+   switch (obj->type) {
+   case VHSAKMT_OBJ_USERPTR:
+      ret = vhsakmt_free_userptr(obj);
+      break;
+
+   case VHSAKMT_OBJ_HOST_MEM:
+      ret = vhsakmt_free_host_mem(ctx, obj);
+      break;
+
+   case VHSAKMT_OBJ_DOORBELL_RW_PTR:
+   case VHSAKMT_OBJ_DOORBELL_PTR:
+      /* Do nothing */
+      break;
+
+   case VHSAKMT_OBJ_EVENT:
+      vhsakmt_free_event_obj(ctx, obj);
+      break;
+
+   case VHSAKMT_OBJ_QUEUE:
+      vhsakmt_free_queue_obj(ctx, obj);
+      break;
+
+   case VHSAKMT_OBJ_SCRATCH_MAP_MEM:
+      ret = vhsakmt_free_scratch_map_mem(ctx, obj);
+      break;
+
+   case VHSAKMT_OBJ_DMA_BUF:
+      vhsakmt_free_dmabuf_obj(ctx, obj);
+      break;
+
+   case VHSAKMT_OBJ_QUEUE_MEM:
+      ret = vhsakmt_free_host_mem(ctx, obj);
+      break;
+
+   default:
+      vhsa_err("Unknown object type: %d, not handled", obj->type);
+      break;
+   }
+
+   if (ret) {
+      vhsa_dbg("Failed to free object: %p, type: %s, res_id: %d, address: %p",
+               (void *)obj, vhsakmt_object_type_name(obj->type), obj->base.res_id,
+               obj->bo);
+      return;
+   }
+
+   vhsa_dbg("Free obj: %p, type: %s, res_id: %d, address: %p", (void *)obj,
+            vhsakmt_object_type_name(obj->type), obj->base.res_id, obj->bo);
+   vhsakmt_context_remove_object(ctx, obj);
+   free(obj);
 }
