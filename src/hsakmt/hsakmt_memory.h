@@ -17,4 +17,6 @@ int vhsakmt_free_scratch_reserve_mem(struct vhsakmt_context *ctx, struct vhsakmt
 
 int vhsakmt_free_host_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj);
 
+void vhsakmt_free_dmabuf_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_object *obj);
+
 #endif /* HSAMKT_MEMORY_H */

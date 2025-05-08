@@ -103,19 +103,6 @@ vhsakmt_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t size,
    return obj;
 }
 
-static void
-vhsakmt_free_dmabuf_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
-{
-   if (!obj || obj->type != VHSAKMT_OBJ_DMA_BUF)
-      return;
-
-   if (obj->fd == -1)
-      return;
-
-   close(obj->fd);
-   obj->fd = -1;
-}
-
 static void vhsakmt_context_remove_object(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    if (vhsakmt_context_res_id_unused(ctx, obj->base.res_id))

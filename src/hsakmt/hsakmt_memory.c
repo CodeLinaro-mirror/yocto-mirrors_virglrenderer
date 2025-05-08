@@ -120,6 +120,19 @@ vhsakmt_free_host_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
    return 0;
 }
 
+void
+vhsakmt_free_dmabuf_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
+{
+   if (!obj || obj->type != VHSAKMT_OBJ_DMA_BUF)
+      return;
+
+   if (obj->fd == -1)
+      return;
+
+   close(obj->fd);
+   obj->fd = -1;
+}
+
 static int
 vhsakmt_scratch_init(struct vhsakmt_context *ctx, struct vhsakmt_node *node,
                           struct vhsakmt_ccmd_memory_req *req, struct vhsakmt_backend *b)
