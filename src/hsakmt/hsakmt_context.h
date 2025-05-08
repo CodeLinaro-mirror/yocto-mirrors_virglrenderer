@@ -163,10 +163,6 @@ struct vhsakmt_object *vhsakmt_context_object_create(HSAKMT_BO_HANDLE handle, ui
 
 void vhsakmt_context_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj);
 
-struct vhsakmt_node *vhsakmt_device_get_node(struct vhsakmt_backend *b, uint32_t node_id);
-
-struct vhsakmt_backend *vhsakmt_device_backend(void);
-
 #define VHSA_RSP_ALLOC(ctx, hdr, size)                                         \
    rsp = vhsakmt_context_rsp(ctx, hdr, size);                                  \
    if (!rsp) {                                                                 \

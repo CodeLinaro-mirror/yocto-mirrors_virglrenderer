@@ -85,6 +85,10 @@ size_t vhsakmt_device_get_capset(UNUSED uint32_t set, UNUSED void *caps);
 struct virgl_context *hsakmt_device_create(UNUSED size_t debug_len,
                                            UNUSED const char *debug_name);
 
+struct vhsakmt_node *vhsakmt_device_get_node(struct vhsakmt_backend *b, uint32_t node_id);
+
+struct vhsakmt_backend *vhsakmt_device_backend(void);
+
 #else
 
 static inline size_t vhsakmt_device_get_capset(UNUSED uint32_t set, UNUSED void *caps)
