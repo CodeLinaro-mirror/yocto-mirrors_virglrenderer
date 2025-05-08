@@ -104,16 +104,6 @@ vhsakmt_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t size,
 }
 
 static void
-vhsakmt_free_event_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
-{
-   if (!obj || obj->type != VHSAKMT_OBJ_EVENT)
-      return;
-
-   hsaKmtSetEvent(obj->bo);
-   hsaKmtDestroyEvent(obj->bo);
-}
-
-static void
 vhsakmt_free_queue_obj(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    hsaKmtDestroyQueue(obj->queue->r.QueueId);

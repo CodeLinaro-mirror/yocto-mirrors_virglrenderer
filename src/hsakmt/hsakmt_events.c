@@ -1,6 +1,16 @@
 #include "hsakmt_events.h"
 #include "util/hsakmt_util.h"
 
+void
+vhsakmt_free_event_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
+{
+   if (!obj || obj->type != VHSAKMT_OBJ_EVENT)
+      return;
+
+   hsaKmtSetEvent(obj->bo);
+   hsaKmtDestroyEvent(obj->bo);
+}
+
 int
 vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)
 {
