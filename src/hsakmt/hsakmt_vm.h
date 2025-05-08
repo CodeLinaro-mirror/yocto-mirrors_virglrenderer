@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <hsakmt/hsakmt.h>
 
-#include "hsakmt_device.h"
+// #include "hsakmt_device.h"
 #include "util/rbtree.h"
 #include "util/list.h"
 #include "util/u_thread.h"
@@ -76,36 +76,6 @@ typedef struct hsakmt_vamgr {
 
    bool dump_va;
 } hsakmt_vamgr_t;
-
-struct vhsakmt_node {
-    HsaNodeProperties node_props;
-    void *doorbell_base_addr;
-    void *scratch_base;
-    hsakmt_vamgr_t scratch_vamgr;
-};
-
-struct vhsakmt_backend {
-  uint32_t context_type;
-  const char *name;
-  struct virgl_renderer_capset_hsakmt hsakmt_capset;
-
-  hsakmt_vamgr_t vamgr;
-
-  uint32_t vamgr_vm_base_addr_type;
-  uint64_t vamgr_vm_fixed_base_addr; /* for VHSA_VAMGR_VM_FIXED_BASE */
-  uint64_t vamgr_vm_heap_interval_size; /* for VHSA_VAMGR_VM_HEAP_INTERVAL_BASE */
-  uint64_t vamgr_vm_kfd_size; /* memory alloc from kfd total reserve size */
-  uint64_t vamgr_vm_scratch_size; /* scratch total reserve size */
-  uint64_t vamgr_vm_context_size; /* per context size */
-  uint64_t expected_doorbell_base_addr;
-
-  uint32_t vhsakmt_open_count;
-  uint32_t vhsakmt_num_nodes;
-  uint32_t vhsakmt_gpu_count;
-  HsaSystemProperties sys_props;
-  struct vhsakmt_node *vhsakmt_nodes;
-  pthread_mutex_t hsakmt_mutex;
-};
 
 int vhsakmt_init_vamgr(hsakmt_vamgr_t *mgr, uint64_t start, uint64_t size);
 
