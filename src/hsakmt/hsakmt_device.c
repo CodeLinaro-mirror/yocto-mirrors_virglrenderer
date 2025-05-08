@@ -67,22 +67,6 @@ vhsakmt_device_get_node(struct vhsakmt_backend *b, uint32_t node_id)
    return &b->vhsakmt_nodes[node_id];
 }
 
-struct vhsakmt_object *
-vhsakmt_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t size,
-                      vhsakmt_object_type_t type)
-{
-   struct vhsakmt_object *obj = calloc(1, sizeof(*obj));
-   if (!obj)
-      return NULL;
-
-   obj->bo = handle;
-   obj->flags = flags;
-   obj->base.size = size;
-   obj->type = type;
-
-   return obj;
-}
-
 static void vhsakmt_context_remove_object(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    if (vhsakmt_context_res_id_unused(ctx, obj->base.res_id))
@@ -205,7 +189,7 @@ vhsakmt_device_attach_resource(struct virgl_context *vctx, struct virgl_resource
                return;
             }
          }
-         obj = vhsakmt_object_create(res->mapped,
+         obj = vhsakmt_context_object_create(res->mapped,
                                      VIRGL_RENDERER_BLOB_FLAG_USE_SHAREABLE,
                                      res->map_size, VHSAKMT_OBJ_DMA_BUF);
          if (!obj)
@@ -263,7 +247,7 @@ vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id, uint64_t bl
    if (!obj && (blob_flags & VIRGL_RENDERER_BLOB_FLAG_USE_USERPTR)) {
       if (blob->u.va_handle) {
          /* for userptr blob memory */
-         obj = vhsakmt_object_create(blob->u.va_handle, 0,
+         obj = vhsakmt_context_object_create(blob->u.va_handle, 0,
                                      blob_size / getpagesize(),
                                      VHSAKMT_OBJ_USERPTR);
          vhsa_log("Create userptr address: %p size: 0x%lx", blob->u.va_handle, blob_size);

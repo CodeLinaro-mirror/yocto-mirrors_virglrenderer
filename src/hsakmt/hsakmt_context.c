@@ -104,3 +104,19 @@ vhsakmt_context_res_id_unused(struct vhsakmt_context *ctx, uint32_t res_id)
 {
    return drm_context_res_id_unused(&ctx->base, res_id);
 }
+
+struct vhsakmt_object *
+vhsakmt_context_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t size,
+                      vhsakmt_object_type_t type)
+{
+   struct vhsakmt_object *obj = calloc(1, sizeof(*obj));
+   if (!obj)
+      return NULL;
+
+   obj->bo = handle;
+   obj->flags = flags;
+   obj->base.size = size;
+   obj->type = type;
+
+   return obj;
+}

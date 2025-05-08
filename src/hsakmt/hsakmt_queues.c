@@ -38,7 +38,7 @@ vhsakmt_queue_create_doorbell_blob(struct vhsakmt_context *ctx, struct vhsakmt_n
       return -EINVAL;
    }
 
-   struct vhsakmt_object *obj = vhsakmt_object_create(
+   struct vhsakmt_object *obj = vhsakmt_context_object_create(
        (void *)node->doorbell_base_addr, 0,
        vhsakmt_doorbell_page_size(hsakmt_get_gfx_version_full(node->node_props.EngineId)),
        VHSAKMT_OBJ_DOORBELL_PTR);
@@ -60,7 +60,7 @@ vhsakmt_queue_create_rw_ptr_blob(struct vhsakmt_context *ctx,
    vqueue_res->host_read_offset =
        vqueue_res->r.QueueRptrValue - vqueue_res->host_rw_handle;
 
-   struct vhsakmt_object *obj = vhsakmt_object_create(
+   struct vhsakmt_object *obj = vhsakmt_context_object_create(
        (void *)vqueue_res->host_rw_handle, 0, getpagesize(), VHSAKMT_OBJ_DOORBELL_RW_PTR);
    if (!obj)
       return -ENOMEM;
@@ -197,7 +197,7 @@ vhsakmt_queue_create(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_queue_req 
       }
    }
 
-   queue_obj = vhsakmt_object_create((void *)vqueue_res, 0, sizeof(*vqueue_res), VHSAKMT_OBJ_QUEUE);
+   queue_obj = vhsakmt_context_object_create((void *)vqueue_res, 0, sizeof(*vqueue_res), VHSAKMT_OBJ_QUEUE);
    if (!queue_obj) {
       vhsa_err("Create queue object failed");
       ret = -ENOMEM;

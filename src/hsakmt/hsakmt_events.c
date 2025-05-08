@@ -36,7 +36,7 @@ vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *h
       memcpy(&rsp->vevent, e, sizeof(*e));
       rsp->vevent.event_handle = (uint64_t)e;
 
-      obj = vhsakmt_object_create(e, 0, sizeof(*e), VHSAKMT_OBJ_EVENT);
+      obj = vhsakmt_context_object_create(e, 0, sizeof(*e), VHSAKMT_OBJ_EVENT);
       if (!obj)
          return -ENOMEM;
 

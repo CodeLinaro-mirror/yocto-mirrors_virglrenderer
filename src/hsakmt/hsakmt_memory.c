@@ -286,7 +286,7 @@ vhsakmt_alloc_memory(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_memory_req
    if (ret)
       return ret;
 
-   obj = vhsakmt_object_create(*MemoryAddress, req->alloc_args.MemFlags.Value,
+   obj = vhsakmt_context_object_create(*MemoryAddress, req->alloc_args.MemFlags.Value,
                                req->alloc_args.SizeInBytes, VHSAKMT_OBJ_HOST_MEM);
 
    vhsakmt_context_object_set_blob_id(ctx, obj, req->blob_id);
@@ -352,7 +352,7 @@ vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *
 
       if (req->map_to_GPU_args.need_create_bo) {
          struct vhsakmt_object *obj;
-         obj = vhsakmt_object_create((void *)req->map_to_GPU_args.MemoryAddress, 0,
+         obj = vhsakmt_context_object_create((void *)req->map_to_GPU_args.MemoryAddress, 0,
                                      req->map_to_GPU_args.MemorySizeInBytes,
                                      VHSAKMT_OBJ_SCRATCH_MAP_MEM);
          if (!obj) {

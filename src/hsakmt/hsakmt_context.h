@@ -156,7 +156,7 @@ vhsakmt_context_get_object_from_res_id(struct vhsakmt_context *ctx,
 bool vhsakmt_context_res_id_unused(struct vhsakmt_context *ctx,
                                    uint32_t res_id);
 
-struct vhsakmt_object *vhsakmt_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t size,
+struct vhsakmt_object *vhsakmt_context_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t size,
                                              vhsakmt_object_type_t type);
 
 void vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj);
