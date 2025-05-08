@@ -31,8 +31,6 @@
 #include "virgl_util.h"
 #include "hsakmt_vm.h"
 
-
-#define HSAKMT_BO_HANDLE void *
 #define VIRGL_RENDERER_CAPSET_HSAKMT 8
 
 #ifdef ENABLE_HSAKMT_AMDGPU

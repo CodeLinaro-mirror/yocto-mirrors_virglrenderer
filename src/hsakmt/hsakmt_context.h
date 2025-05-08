@@ -32,6 +32,8 @@
 
 #ifdef ENABLE_HSAKMT_AMDGPU
 
+#define HSAKMT_BO_HANDLE void *
+
 /* reuse the drm context and obj but use hsakmt_base for further upgrade */
 #define vhsakmt_base_context drm_context
 #define vhsakmt_base_object drm_object
