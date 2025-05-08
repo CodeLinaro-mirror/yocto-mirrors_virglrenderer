@@ -161,19 +161,9 @@ struct vhsakmt_object *vhsakmt_object_create(HSAKMT_BO_HANDLE handle, uint32_t f
 
 void vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj);
 
-bool vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx, UNUSED uint64_t value);
-
 struct vhsakmt_node *vhsakmt_device_get_node(struct vhsakmt_backend *b, uint32_t node_id);
 
 struct vhsakmt_backend *vhsakmt_device_backend(void);
-
-#define VHSA_CHECK_VA(va)                                                      \
-   if (!vhsakmt_check_va_valid(ctx, (uint64_t)va)) {                           \
-      rsp->ret = -EPERM;                                                       \
-      break;                                                                   \
-   } else                                                                      \
-      do {                                                                     \
-      } while (false)
 
 #define VHSA_RSP_ALLOC(ctx, hdr, size)                                         \
    rsp = vhsakmt_context_rsp(ctx, hdr, size);                                  \

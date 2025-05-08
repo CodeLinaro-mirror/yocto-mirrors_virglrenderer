@@ -1,5 +1,6 @@
 #include "hsakmt_events.h"
 #include "util/hsakmt_util.h"
+#include "hsakmt_memory.h"
 
 void
 vhsakmt_free_event_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_object *obj)

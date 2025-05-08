@@ -294,23 +294,6 @@ vhsakmt_device_get_blob(struct virgl_context *vctx, uint32_t res_id, uint64_t bl
    return 0;
 }
 
-inline bool
-vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx, UNUSED uint64_t value)
-{
-#ifdef VHSA_CHECK_VA_ENABLE
-   if (!ctx->vamgr.vm_va_base_addr || !ctx->vamgr.vm_va_high_addr)
-      return false;
-
-   if (value >= ctx->vamgr.vm_va_base_addr &&
-       value < ctx->vamgr.vm_va_high_addr)
-      return true;
-
-   return false;
-#else
-   return true;
-#endif
-}
-
 static int
 vhsakmt_ccmd_nop(UNUSED struct vhsakmt_base_context *bctx,
                  UNUSED struct vhsakmt_ccmd_req *hdr)

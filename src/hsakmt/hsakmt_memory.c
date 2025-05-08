@@ -1,6 +1,23 @@
 #include "hsakmt_memory.h"
 #include "util/hsakmt_util.h"
 
+inline bool
+vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx, UNUSED uint64_t value)
+{
+#ifdef VHSA_CHECK_VA_ENABLE
+   if (!ctx->vamgr.vm_va_base_addr || !ctx->vamgr.vm_va_high_addr)
+      return false;
+
+   if (value >= ctx->vamgr.vm_va_base_addr &&
+       value < ctx->vamgr.vm_va_high_addr)
+      return true;
+
+   return false;
+#else
+   return true;
+#endif
+}
+
 int
 vhsakmt_gpu_unmap(struct vhsakmt_object *obj)
 {
