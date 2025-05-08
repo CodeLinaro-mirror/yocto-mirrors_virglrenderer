@@ -124,6 +124,8 @@ hsakmt_amdgpu_source = [
    'hsakmt/hsakmt_context.c',
    'hsakmt/hsakmt_vm.h',
    'hsakmt/hsakmt_vm.c',
+   'hsakmt/hsakmt_query.h',
+   'hsakmt/hsakmt_query.c',
    'hsakmt/hsakmt_hw.h',
    'hsakmt/util/rbtree_amd.h',
    'hsakmt/util/rbtree.h',

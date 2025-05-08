@@ -156,6 +156,14 @@ vhsakmt_context_get_object_from_res_id(struct vhsakmt_context *ctx,
 bool vhsakmt_context_res_id_unused(struct vhsakmt_context *ctx,
                                    uint32_t res_id);
 
+#define VHSA_RSP_ALLOC(ctx, hdr, size)                                         \
+   rsp = vhsakmt_context_rsp(ctx, hdr, size);                                  \
+   if (!rsp) {                                                                 \
+      return -ENOMEM;                                                          \
+   } else                                                                      \
+      do {                                                                     \
+      } while (false)
+
 #endif /* ENABLE_HSAKMT_AMDGPU */
 
 #endif /* HSAKMT_CONTEXT_H_ */
