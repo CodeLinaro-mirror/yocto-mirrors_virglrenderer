@@ -113,7 +113,7 @@ vhsakmt_queue_create(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_queue_req 
    struct vhsakmt_object *queue_obj;
    vHsaQueueResource *vqueue_res;
    struct vhsakmt_node *node =
-      vhsakmt_get_node(vhsakmt_device_backend(), req->create_queue_args.NodeId);
+      vhsakmt_device_get_node(vhsakmt_device_backend(), req->create_queue_args.NodeId);
    if (!node) {
       vhsa_err("Invalid node %d", req->create_queue_args.NodeId);
       return HSAKMT_STATUS_INVALID_NODE_UNIT;

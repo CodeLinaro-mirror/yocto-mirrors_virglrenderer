@@ -59,7 +59,7 @@ vhsakmt_device_is_gpu_node(struct vhsakmt_node *n)
 }
 
 struct vhsakmt_node *
-vhsakmt_get_node(struct vhsakmt_backend *b, uint32_t node_id)
+vhsakmt_device_get_node(struct vhsakmt_backend *b, uint32_t node_id)
 {
    if (!b->vhsakmt_num_nodes || node_id >= b->vhsakmt_num_nodes)
       return NULL;
@@ -445,7 +445,7 @@ vhsakmt_device_get_nodes_properties(struct vhsakmt_backend *b)
    b->vhsakmt_nodes = calloc(b->vhsakmt_num_nodes, sizeof(struct vhsakmt_node));
 
    for (i = 0; i < b->vhsakmt_num_nodes; i++) {
-      node = vhsakmt_get_node(b, i);
+      node = vhsakmt_device_get_node(b, i);
       if (!node) {
          fprintf(stderr, "Get node %d failed.\n", i);
          return -EINVAL;

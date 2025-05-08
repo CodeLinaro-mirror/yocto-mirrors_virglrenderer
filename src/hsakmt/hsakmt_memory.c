@@ -179,7 +179,7 @@ vhsakmt_alloc_scratch(struct vhsakmt_context *ctx,
    void *mem;
 
    struct vhsakmt_node *node =
-       vhsakmt_get_node(vhsakmt_device_backend(), req->alloc_args.PreferredNode);
+       vhsakmt_device_get_node(vhsakmt_device_backend(), req->alloc_args.PreferredNode);
    if (!node) {
       vhsa_err("Invalid node %d", req->alloc_args.PreferredNode);
       return HSAKMT_STATUS_INVALID_NODE_UNIT;

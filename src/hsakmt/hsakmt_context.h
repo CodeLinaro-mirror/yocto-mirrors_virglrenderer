@@ -163,7 +163,7 @@ void vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_
 
 bool vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx, UNUSED uint64_t value);
 
-struct vhsakmt_node *vhsakmt_get_node(struct vhsakmt_backend *b, uint32_t node_id);
+struct vhsakmt_node *vhsakmt_device_get_node(struct vhsakmt_backend *b, uint32_t node_id);
 
 struct vhsakmt_backend *vhsakmt_device_backend(void);
 
