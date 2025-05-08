@@ -80,7 +80,7 @@ vhsakmt_device_detach_resource(struct virgl_context *vctx,
    if (obj->type == VHSAKMT_OBJ_QUEUE_MEM)
       obj->guest_removed = true;
 
-   vhsakmt_free_object(&ctx->base, &obj->base);
+   vhsakmt_context_free_object(&ctx->base, &obj->base);
 }
 
 static void
@@ -486,7 +486,7 @@ hsakmt_device_create(UNUSED size_t debug_len, UNUSED const char *debug_name)
    ctx->base.base.attach_resource = vhsakmt_device_attach_resource;
    ctx->base.base.get_blob = vhsakmt_device_get_blob;
    ctx->base.base.submit_fence = vhsakmt_device_submit_fence;
-   ctx->base.free_object = vhsakmt_free_object;
+   ctx->base.free_object = vhsakmt_context_free_object;
    /* must use private detach cause some resource free need delay */
    ctx->base.base.detach_resource = vhsakmt_device_detach_resource;
 

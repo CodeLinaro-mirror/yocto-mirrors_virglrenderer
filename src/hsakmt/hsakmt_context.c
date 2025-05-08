@@ -136,7 +136,7 @@ vhsakmt_context_remove_object(struct vhsakmt_context *ctx, struct vhsakmt_object
 }
 
 void
-vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj)
+vhsakmt_context_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj)
 {
    struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
    struct vhsakmt_object *obj = to_vhsakmt_object(bobj);

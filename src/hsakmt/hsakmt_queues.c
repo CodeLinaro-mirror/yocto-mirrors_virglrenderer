@@ -255,7 +255,7 @@ vhsakmt_ccmd_queue(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *h
       struct vhsakmt_object *obj =
           vhsakmt_context_get_object_from_res_id(ctx, req->res_id);
       if (obj) {
-         vhsakmt_free_object(&ctx->base, &obj->base);
+         vhsakmt_context_free_object(&ctx->base, &obj->base);
          break;
       }
 
@@ -280,12 +280,12 @@ vhsakmt_free_queue_obj(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 
    if (obj->queue_rw_mem) {
       obj->queue_rw_mem->queue_obj = NULL;
-      vhsakmt_free_object(&ctx->base, &obj->queue_rw_mem->base);
+      vhsakmt_context_free_object(&ctx->base, &obj->queue_rw_mem->base);
    }
 
    if (obj->queue_mem) {
       obj->queue_mem->queue_obj = NULL;
-      vhsakmt_free_object(&ctx->base, &obj->queue_mem->base);
+      vhsakmt_context_free_object(&ctx->base, &obj->queue_mem->base);
    }
 
    free(obj->queue);

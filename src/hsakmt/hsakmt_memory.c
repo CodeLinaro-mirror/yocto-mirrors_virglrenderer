@@ -379,7 +379,7 @@ vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *
          struct vhsakmt_object *obj =
              vhsakmt_context_get_object_from_res_id(ctx, req->res_id);
          if (obj && (obj->type & VHSAKMT_OBJ_DMA_BUF))
-            vhsakmt_free_object(&ctx->base, &obj->base);
+            vhsakmt_context_free_object(&ctx->base, &obj->base);
       }
 
       break;

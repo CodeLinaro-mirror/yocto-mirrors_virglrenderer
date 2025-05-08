@@ -58,7 +58,7 @@ vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *h
             break;
          }
       } else
-         vhsakmt_free_object(&ctx->base, &obj->base);
+         vhsakmt_context_free_object(&ctx->base, &obj->base);
 
       rsp->ret = 0;
       break;
