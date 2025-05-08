@@ -50,14 +50,14 @@ void vhsakmt_device_fini(void);
 
 void vhsakmt_device_reset(void);
 
-size_t vhsakmt_get_capset(UNUSED uint32_t set, UNUSED void *caps);
+size_t vhsakmt_device_get_capset(UNUSED uint32_t set, UNUSED void *caps);
 
 struct virgl_context *hsakmt_device_create(UNUSED size_t debug_len,
                                            UNUSED const char *debug_name);
 
 #else
 
-static inline size_t vhsakmt_get_capset(UNUSED uint32_t set, UNUSED void *caps)
+static inline size_t vhsakmt_device_get_capset(UNUSED uint32_t set, UNUSED void *caps)
 {
    return 0;
 }

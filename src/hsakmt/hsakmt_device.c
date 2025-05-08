@@ -556,7 +556,7 @@ vhsakmt_device_fini(void)
 void vhsakmt_device_reset(void) {}
 
 size_t
-vhsakmt_get_capset(UNUSED uint32_t set, UNUSED void *caps)
+vhsakmt_device_get_capset(UNUSED uint32_t set, UNUSED void *caps)
 {
    struct virgl_renderer_capset_hsakmt *c = caps;
 

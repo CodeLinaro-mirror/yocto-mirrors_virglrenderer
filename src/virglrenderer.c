@@ -197,7 +197,7 @@ void virgl_renderer_fill_caps(uint32_t set, uint32_t version,
       break;
    case VIRGL_RENDERER_CAPSET_HSAKMT:
       if (state.vhsakmt_initialized)
-         vhsakmt_get_capset(set, caps);
+         vhsakmt_device_get_capset(set, caps);
       break;
    default:
       break;
@@ -587,7 +587,7 @@ void virgl_renderer_get_cap_set(uint32_t cap_set, uint32_t *max_ver,
       break;
    case VIRGL_RENDERER_CAPSET_HSAKMT:
       *max_ver = 1;
-      *max_size = vhsakmt_get_capset(cap_set, NULL);
+      *max_size = vhsakmt_device_get_capset(cap_set, NULL);
       break;
    default:
       *max_ver = 0;
