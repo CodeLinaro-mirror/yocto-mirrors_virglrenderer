@@ -368,7 +368,7 @@ vhsakmt_device_submit_fence(struct virgl_context *vctx, uint32_t flags, uint32_t
 }
 
 static int
-vhsakmt_vm_init(struct vhsakmt_backend *b)
+vhsakmt_device_vm_init(struct vhsakmt_backend *b)
 {
    uint64_t vm_base_addr;
    uint32_t i;
@@ -511,7 +511,7 @@ vhsakmt_device_init(void)
         return ret;
     }
 
-   ret = vhsakmt_vm_init(&backend);
+   ret = vhsakmt_device_vm_init(&backend);
    if (ret) {
       fprintf(stderr, "Init vamgr failed.\n");
       return ret;
