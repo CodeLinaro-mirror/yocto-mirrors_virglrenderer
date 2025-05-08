@@ -20,36 +20,16 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "config.h"
+#include <hsakmt/hsakmt.h>
 
-#include <errno.h>
-#include <fcntl.h>
-#include <inttypes.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <sys/mman.h>
-#include <unistd.h>
-
-#include "pipe/p_state.h"
-#include "util/anon_file.h"
-#include "util/bitscan.h"
-#include "util/hash_table.h"
-#include "util/macros.h"
-#include "util/u_atomic.h"
-#include "util/u_math.h"
-#include "util/u_thread.h"
 #include "virgl_context.h"
 #include "virglrenderer.h"
-
-#include "drm/drm_util.h"
 
 #include "hsakmt_virtio_proto.h"
 #include "hsakmt_context.h"
 #include "hsakmt_device.h"
-#include "hsakmt_vm.h"
 #include "util/hsakmt_util.h"
-#include <hsakmt/hsakmt.h>
-
+#include "hsakmt_vm.h"
 #include "hsakmt_query.h"
 #include "hsakmt_events.h"
 #include "hsakmt_memory.h"
