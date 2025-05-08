@@ -53,7 +53,7 @@ static struct vhsakmt_backend backend = {
 inline struct vhsakmt_backend *vhsakmt_backend(void) { return &backend; }
 
 static inline bool
-vhsakmt_is_gpu_node(struct vhsakmt_node *n)
+vhsakmt_device_is_gpu_node(struct vhsakmt_node *n)
 {
    return n->node_props.KFDGpuID != 0;
 }
@@ -178,7 +178,7 @@ vhsakmt_device_destroy(struct virgl_context *vctx)
 
    for (i = 0; i < vhsakmt_backend()->vhsakmt_num_nodes; i++)
    {
-      if (vhsakmt_is_gpu_node(&vhsakmt_backend()->vhsakmt_nodes[i]))
+      if (vhsakmt_device_is_gpu_node(&vhsakmt_backend()->vhsakmt_nodes[i]))
          hsakmt_free_from_vamgr(&vhsakmt_backend()->vhsakmt_nodes[i].scratch_vamgr,
             (uint64_t)vhsakmt_backend()->vhsakmt_nodes[i].scratch_base);
    }
@@ -512,7 +512,7 @@ vhsakmt_device_destroy_scratch_vamgr(struct vhsakmt_backend *b)
     uint32_t i;
 
     for (i = 0; i < b->vhsakmt_num_nodes; i++) {
-       if (vhsakmt_is_gpu_node(&b->vhsakmt_nodes[i]))
+       if (vhsakmt_device_is_gpu_node(&b->vhsakmt_nodes[i]))
           vhsakmt_destroy_vamgr(&b->vhsakmt_nodes[i].scratch_vamgr);
     }
 }
