@@ -161,6 +161,8 @@ struct vhsakmt_object *vhsakmt_context_object_create(HSAKMT_BO_HANDLE handle, ui
 
 void vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj);
 
+void vhsakmt_context_remove_object(struct vhsakmt_context *ctx, struct vhsakmt_object *obj);
+
 struct vhsakmt_node *vhsakmt_device_get_node(struct vhsakmt_backend *b, uint32_t node_id);
 
 struct vhsakmt_backend *vhsakmt_device_backend(void);

@@ -120,3 +120,12 @@ vhsakmt_context_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t 
 
    return obj;
 }
+
+void
+vhsakmt_context_remove_object(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
+{
+   if (vhsakmt_context_res_id_unused(ctx, obj->base.res_id))
+      return;
+
+   _mesa_hash_table_remove_key(ctx->base.resource_table, (void *)(uintptr_t)obj->base.res_id);
+}

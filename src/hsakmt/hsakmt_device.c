@@ -67,14 +67,6 @@ vhsakmt_device_get_node(struct vhsakmt_backend *b, uint32_t node_id)
    return &b->vhsakmt_nodes[node_id];
 }
 
-static void vhsakmt_context_remove_object(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
-{
-   if (vhsakmt_context_res_id_unused(ctx, obj->base.res_id))
-      return;
-
-   _mesa_hash_table_remove_key(ctx->base.resource_table, (void *)(uintptr_t)obj->base.res_id);
-}
-
 void
 vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj)
 {
