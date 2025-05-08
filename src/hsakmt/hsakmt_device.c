@@ -72,8 +72,6 @@ static struct vhsakmt_backend backend = {
 
 inline struct vhsakmt_backend *vhsakmt_backend(void) { return &backend; }
 
-static inline uint64_t vhsakmt_queue_page_size() { return getpagesize(); }
-
 static inline bool
 vhsakmt_is_gpu_node(struct vhsakmt_node *n)
 {
