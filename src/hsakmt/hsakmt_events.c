@@ -1,5 +1,5 @@
-#include "hsakmt/hsakmt_events.h"
-#include "hsakmt/util/hsakmt_util.h"
+#include "hsakmt_events.h"
+#include "util/hsakmt_util.h"
 
 int
 vhsakmt_ccmd_event(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)

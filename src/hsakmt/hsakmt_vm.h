@@ -27,7 +27,7 @@
 #include <hsakmt/hsakmt.h>
 
 #include "hsakmt_device.h"
-#include "hsakmt/util/rbtree.h"
+#include "util/rbtree.h"
 #include "util/list.h"
 #include "util/u_thread.h"
 

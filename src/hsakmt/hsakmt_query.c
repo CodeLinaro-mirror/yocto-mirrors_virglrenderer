@@ -2,8 +2,8 @@
 #include <drm/amdgpu_drm.h>
 #include <xf86drm.h>
 
-#include "hsakmt/hsakmt_query.h"
-#include "hsakmt/util/hsakmt_util.h"
+#include "hsakmt_query.h"
+#include "util/hsakmt_util.h"
 
 static int
 init_amdgpu_drm(amdgpu_device_handle *dev_handle)
