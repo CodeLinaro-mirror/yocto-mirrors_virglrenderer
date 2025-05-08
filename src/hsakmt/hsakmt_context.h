@@ -156,6 +156,21 @@ vhsakmt_context_get_object_from_res_id(struct vhsakmt_context *ctx,
 bool vhsakmt_context_res_id_unused(struct vhsakmt_context *ctx,
                                    uint32_t res_id);
 
+struct vhsakmt_object *vhsakmt_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t size,
+                                             vhsakmt_object_type_t type);
+
+void vhsakmt_free_object(struct vhsakmt_base_context *bctx, struct vhsakmt_base_object *bobj);
+
+bool vhsakmt_check_va_valid(UNUSED struct vhsakmt_context *ctx, UNUSED uint64_t value);
+
+#define VHSA_CHECK_VA(va)                                                      \
+   if (!vhsakmt_check_va_valid(ctx, (uint64_t)va)) {                           \
+      rsp->ret = -EPERM;                                                       \
+      break;                                                                   \
+   } else                                                                      \
+      do {                                                                     \
+      } while (false)
+
 #define VHSA_RSP_ALLOC(ctx, hdr, size)                                         \
    rsp = vhsakmt_context_rsp(ctx, hdr, size);                                  \
    if (!rsp) {                                                                 \
