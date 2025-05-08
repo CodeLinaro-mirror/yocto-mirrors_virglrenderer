@@ -104,25 +104,6 @@ vhsakmt_object_create(HSAKMT_BO_HANDLE handle, uint32_t flags, uint32_t size,
 }
 
 static void
-vhsakmt_free_queue_obj(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
-{
-   hsaKmtDestroyQueue(obj->queue->r.QueueId);
-
-   if (obj->queue_rw_mem) {
-      obj->queue_rw_mem->queue_obj = NULL;
-      vhsakmt_free_object(&ctx->base, &obj->queue_rw_mem->base);
-   }
-
-   if (obj->queue_mem) {
-      obj->queue_mem->queue_obj = NULL;
-      vhsakmt_free_object(&ctx->base, &obj->queue_mem->base);
-   }
-
-   free(obj->queue);
-   obj->queue = NULL;
-}
-
-static void
 vhsakmt_free_dmabuf_obj(UNUSED struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
    if (!obj || obj->type != VHSAKMT_OBJ_DMA_BUF)

@@ -272,3 +272,22 @@ vhsakmt_ccmd_queue(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *h
 
    return 0;
 }
+
+void
+vhsakmt_free_queue_obj(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
+{
+   hsaKmtDestroyQueue(obj->queue->r.QueueId);
+
+   if (obj->queue_rw_mem) {
+      obj->queue_rw_mem->queue_obj = NULL;
+      vhsakmt_free_object(&ctx->base, &obj->queue_rw_mem->base);
+   }
+
+   if (obj->queue_mem) {
+      obj->queue_mem->queue_obj = NULL;
+      vhsakmt_free_object(&ctx->base, &obj->queue_mem->base);
+   }
+
+   free(obj->queue);
+   obj->queue = NULL;
+}

@@ -5,4 +5,6 @@
 
 int vhsakmt_ccmd_queue(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr);
 
+void vhsakmt_free_queue_obj(struct vhsakmt_context *ctx, struct vhsakmt_object *obj);
+
 #endif /* HSAKMT_QUEUES_H */
