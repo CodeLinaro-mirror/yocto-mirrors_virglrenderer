@@ -130,6 +130,8 @@ hsakmt_amdgpu_source = [
    'hsakmt/hsakmt_events.c',
    'hsakmt/hsakmt_memory.c',
    'hsakmt/hsakmt_memory.h',
+   'hsakmt/hsakmt_queues.h',
+   'hsakmt/hsakmt_queues.c',
    'hsakmt/hsakmt_hw.h',
    'hsakmt/util/rbtree_amd.h',
    'hsakmt/util/rbtree.h',
