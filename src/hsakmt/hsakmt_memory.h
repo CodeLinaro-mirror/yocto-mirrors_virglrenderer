@@ -5,4 +5,6 @@
 
 int vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr);
 
+int vhsakmt_ccmd_gl_inter(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr);
+
 #endif /* HSAMKT_MEMORY_H */

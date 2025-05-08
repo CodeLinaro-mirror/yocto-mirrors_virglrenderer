@@ -258,3 +258,56 @@ vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *
 
    return 0;
 }
+
+int
+vhsakmt_ccmd_gl_inter(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *hdr)
+{
+   const struct vhsakmt_ccmd_gl_inter_req *req = to_vhsakmt_ccmd_gl_inter_req(hdr);
+   struct vhsakmt_context *ctx = to_vhsakmt_context(bctx);
+   struct vhsakmt_ccmd_gl_inter_rsp *rsp;
+   size_t rsp_len = sizeof(*rsp);
+
+   switch (req->type) {
+   case VHSAKMT_CCMD_GL_REG_GHD_TO_NODES: {
+      HsaGraphicsResourceInfo info;
+      int ret = 0;
+
+      struct vhsakmt_object *obj =
+          vhsakmt_context_get_object_from_res_id(ctx, req->reg_ghd_to_nodes.res_handle);
+      if (!obj || obj->fd == -1) {
+         vhsa_err("GL interop dmabuf no fd or no obj, res id: %u, obj: %p",
+                  req->reg_ghd_to_nodes.res_handle, (void *)obj);
+         VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
+         rsp->ret = HSAKMT_STATUS_INVALID_HANDLE;
+         break;
+      }
+
+      ret = hsaKmtRegisterGraphicsHandleToNodes(
+          obj->fd, &info, req->reg_ghd_to_nodes.NumberOfNodes, (HSAuint32 *)req->payload);
+      vhsa_log("hsaKmtRegisterGraphicsHandleToNodes, fd: %d, address: %p, size: "
+               "%lx, meta address: %p, meta size: %x, ret: %d",
+               obj->fd, info.MemoryAddress, info.SizeInBytes, info.Metadata,
+               info.MetadataSizeInBytes, ret);
+
+      if (ret) {
+         VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
+      } else {
+         rsp = vhsakmt_context_rsp(ctx, hdr, rsp_len + info.MetadataSizeInBytes);
+         memcpy(&rsp->info, &info, sizeof(info));
+         memcpy(&rsp->payload, info.Metadata, info.MetadataSizeInBytes);
+      }
+
+      rsp->ret = ret;
+      break;
+   }
+
+   default:
+      vhsa_err("GL interop command: %d not support.", req->type);
+      break;
+   }
+
+   if (rsp->ret)
+      vhsa_err("Type: %d ret: %d", req->type, rsp->ret);
+
+   return 0;
+}
