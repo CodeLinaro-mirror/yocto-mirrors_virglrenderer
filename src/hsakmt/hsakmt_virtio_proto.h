@@ -100,6 +100,7 @@ enum vhsakmt_ccmd_query_type {
    VHSAKMT_CCMD_QUERY_POINTER_INFO,
    VHSAKMT_CCMD_QUERY_TILE_CONFIG,
    VHSAKMT_CCMD_QUERY_NANO_TIME,
+   VHSAKMT_CCMD_QUERY_GET_RUNTIME_CAPS,
 };
 
 #define QUERY_PTR_INFO_MAX_MAPPED_NODES 3
@@ -194,6 +195,7 @@ struct vhsakmt_ccmd_query_info_rsp {
       HsaNodeProperties node_props;
       int32_t xnack_mode;
       HsaClockCounters clock_counters;
+      uint32_t caps;
       uint64_t pad[9];
    };
    uint8_t payload[];

@@ -265,6 +265,11 @@ vhsakmt_ccmd_query_info(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_r
       rsp->ret = 0;
       break;
    }
+   case VHSAKMT_CCMD_QUERY_GET_RUNTIME_CAPS: {
+      VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
+      rsp->ret = hsaKmtGetRuntimeCapabilities(&rsp->caps);
+      break;
+   }
 
    default:
       vhsa_err("Unsopported query command: %d", req->type);
