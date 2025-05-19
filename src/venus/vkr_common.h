@@ -181,6 +181,7 @@ struct vkr_region {
 };
 
 extern uint32_t vkr_debug_flags;
+extern uint32_t vkr_heap_memory_percent;
 
 void
 vkr_debug_init(void);

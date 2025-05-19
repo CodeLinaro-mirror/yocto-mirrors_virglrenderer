@@ -188,6 +188,22 @@ vkr_physical_device_init_memory_properties(struct vkr_physical_device *physical_
       }
    }
 
+   /* VKR_HEAP_MEMORY_PERCENT controls the Vulkan memory heap capacity exposed to the
+    * driver side. To be noted, it doesn't enforce the maximium device memory alloc,
+    * but serves as a hint to steer the system and app default behavior. To actually
+    * restrict the device memory alloc from the venus driver side, one can configure
+    * venus to the guest vram mode (virgl_renderer_capset_venus::use_guest_vram) with
+    * a dedicated heap suballocated by drm mm and VMM.
+    */
+   if (vkr_heap_memory_percent > 0) {
+      assert(vkr_heap_memory_percent <= 100);
+      for (uint32_t i = 0; i < physical_dev->memory_properties.memoryHeapCount; i++) {
+         physical_dev->memory_properties.memoryHeaps[i].size =
+            physical_dev->memory_properties.memoryHeaps[i].size *
+            vkr_heap_memory_percent / 100;
+      }
+   }
+
    /* XXX When a VkMemoryType has VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, we
     * assume any VkDeviceMemory with the memory type can be made external and
     * be exportable.  That is incorrect but is what we have to live with with
@@ -303,6 +319,10 @@ vkr_physical_device_init_extensions(struct vkr_physical_device *physical_dev)
          physical_dev->EXT_metal_objects = true;
       else if (!strcmp(props->extensionName, "VK_KHR_portability_subset"))
          physical_dev->KHR_portability_subset = true;
+
+      if (vkr_heap_memory_percent > 0 &&
+          !strcmp(props->extensionName, "VK_EXT_memory_budget"))
+         continue;
 
       const uint32_t spec_ver = vkr_extension_get_spec_version(props->extensionName);
       if (spec_ver) {

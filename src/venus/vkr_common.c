@@ -234,13 +234,19 @@ static const struct debug_named_value vkr_debug_options[] = {
 };
 
 uint32_t vkr_debug_flags;
+uint32_t vkr_heap_memory_percent;
 
 DEBUG_GET_ONCE_FLAGS_OPTION(vkr_debug_flags, "VKR_DEBUG", vkr_debug_options, 0)
+DEBUG_GET_ONCE_NUM_OPTION(vkr_heap_memory_percent, "VKR_HEAP_MEMORY_PERCENT", 0)
 
 void
 vkr_debug_init(void)
 {
    vkr_debug_flags = debug_get_option_vkr_debug_flags();
+
+   vkr_heap_memory_percent = debug_get_option_vkr_heap_memory_percent();
+   if (vkr_heap_memory_percent > 100)
+      vkr_heap_memory_percent = 100;
 }
 
 void
