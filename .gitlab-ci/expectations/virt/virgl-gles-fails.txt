@@ -8,7 +8,6 @@ dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_1,Fail
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_2,Fail
 dEQP-GLES31.functional.tessellation.shader_input_output.barrier,Fail
-dEQP-GLES31.functional.texture.border_clamp.range_clamp.linear_float_color,Fail
 
 fast_color_clear@fcc-front-buffer-distraction,ExpectedFail
 shaders@glsl-fs-pointcoord,Fail
@@ -3119,3 +3118,6 @@ spec@nv_copy_image@nv_copy_image-formats --samples=2@Source: GL_ALPHA/Destinatio
 spec@arb_framebuffer_object@execution@msaa-alpha-to-one,Fail
 spec@arb_framebuffer_object@execution@msaa-alpha-to-coverage_alpha-to-one,Fail
 spec@arb_framebuffer_object@execution@msaa-alpha-to-coverage_alpha-to-one_write-z,Fail
+KHR-GL30.framebuffer_blit.multisampled_to_singlesampled_blit_depth_config_test,Fail
+KHR-GL31.framebuffer_blit.multisampled_to_singlesampled_blit_depth_config_test,Fail
+KHR-GL32.framebuffer_blit.multisampled_to_singlesampled_blit_depth_config_test,Fail

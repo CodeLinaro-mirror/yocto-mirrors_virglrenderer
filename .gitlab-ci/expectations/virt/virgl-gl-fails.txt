@@ -18,7 +18,6 @@ dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_1,Fail
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_2,Fail
 dEQP-GLES31.functional.tessellation.shader_input_output.barrier,Fail
-dEQP-GLES31.functional.texture.border_clamp.range_clamp.linear_float_color,Fail
 dEQP-GLES3.functional.clipping.line.wide_line_clip_viewport_center,Fail
 dEQP-GLES3.functional.clipping.line.wide_line_clip_viewport_corner,Fail
 dEQP-GLES3.functional.clipping.point.wide_point_clip,Fail
@@ -520,6 +519,9 @@ spec@ext_image_dma_buf_import@ext_image_dma_buf_import-sample_yvyu,Fail
 spec@ext_image_dma_buf_import@ext_image_dma_buf_import-sample_vyuy,Fail
 
 # uprev Mesa in Virglrenderer
+KHR-GL30.framebuffer_blit.multisampled_to_singlesampled_blit_depth_config_test,Fail
+KHR-GL31.framebuffer_blit.multisampled_to_singlesampled_blit_depth_config_test,Fail
+KHR-GL32.framebuffer_blit.multisampled_to_singlesampled_blit_depth_config_test,Fail
 KHR-GL30.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singlesampled_blit,Fail
 KHR-GL31.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singlesampled_blit,Fail
 KHR-GL32.framebuffer_blit.framebuffer_blit_functionality_multisampled_to_singlesampled_blit,Fail

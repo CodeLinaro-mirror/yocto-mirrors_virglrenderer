@@ -18,7 +18,6 @@ dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_1,Fail
 dEQP-GLES31.functional.shaders.sample_variables.sample_mask_in.bit_count_per_two_samples.multisample_texture_2,Fail
 dEQP-GLES31.functional.tessellation.shader_input_output.barrier,Fail
-dEQP-GLES31.functional.texture.border_clamp.range_clamp.linear_float_color,Fail
 dEQP-GLES3.functional.clipping.line.wide_line_clip_viewport_center,Fail
 dEQP-GLES3.functional.clipping.line.wide_line_clip_viewport_corner,Fail
 dEQP-GLES3.functional.clipping.point.wide_point_clip,Fail
@@ -511,3 +510,7 @@ spec@ext_texture_array@copyteximage 1d_array samples=2,Crash
 spec@ext_texture_array@copyteximage 1d_array samples=4,Crash
 spec@ext_texture_array@copyteximage 2d_array samples=2,Crash
 spec@ext_texture_array@copyteximage 2d_array samples=4,Crash
+KHR-GL43.cull_distance.functional_test_item_5_primitive_mode_lines_max_culldist_0,Fail
+KHR-GL43.cull_distance.functional_test_item_5_primitive_mode_points_max_culldist_0,Fail
+KHR-GL43.cull_distance.functional_test_item_5_primitive_mode_triangles_max_culldist_0,Fail
+KHR-GL43.framebuffer_blit.multisampled_to_singlesampled_blit_depth_config_test,Fail
