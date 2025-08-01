@@ -25,6 +25,7 @@
 #include "virgl_context.h"
 #include "virglrenderer.h"
 
+#include "util/u_math.h"
 #include "hsakmt_virtio_proto.h"
 #include "hsakmt_context.h"
 #include "hsakmt_device.h"
@@ -36,7 +37,7 @@
 #include "hsakmt_queues.h"
 
 static struct vhsakmt_backend backend = {
-    .context_type = VIRTGPU_HSAKMT_OCL,
+    .context_type = VIRTGPU_HSAKMT_CONTEXT_AMDGPU,
     .name = "amdgpu-hsakmt",
     .vamgr_vm_base_addr_type = VHSA_VAMGR_VM_TYPE_FIXED_BASE,
     .vamgr_vm_fixed_base_addr = VHSA_FIXED_VM_BASE_ADDR,
@@ -384,6 +385,7 @@ vhsakmt_device_init(void)
       vhsakmt_device_backend()->hsakmt_capset.version_major = info.KernelInterfaceMajorVersion;
       vhsakmt_device_backend()->hsakmt_capset.version_minor = info.KernelInterfaceMinorVersion;
    }
+   vhsakmt_device_backend()->hsakmt_capset.context_type = VIRTGPU_HSAKMT_CONTEXT_AMDGPU;
 
     ret = vhsakmt_device_get_nodes_properties(&backend);
     if (ret) {

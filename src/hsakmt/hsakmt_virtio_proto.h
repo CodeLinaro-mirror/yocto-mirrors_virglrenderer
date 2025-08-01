@@ -28,6 +28,7 @@
 #include <stdint.h>
 
 #include "hsakmt_hw.h"
+#include "util/macros.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
