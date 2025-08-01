@@ -23,14 +23,15 @@
 #ifndef HSAKMT_DEVICE_H
 #define HSAKMT_DEVICE_H
 
-#include "config.h"
-
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#include "config.h"
 #include "virgl_util.h"
+
 #define HSAKMT_BO_HANDLE void *
+#define VIRGL_RENDERER_CAPSET_HSAKMT 8
 
 #ifdef ENABLE_HSAKMT_AMDGPU
 

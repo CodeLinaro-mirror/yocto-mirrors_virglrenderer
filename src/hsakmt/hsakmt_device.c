@@ -40,7 +40,6 @@
 #include "util/u_thread.h"
 #include "virgl_context.h"
 #include "virglrenderer.h"
-#include "vrend_renderer.h"
 
 #include "drm/drm_util.h"
 #include <amdgpu.h>
