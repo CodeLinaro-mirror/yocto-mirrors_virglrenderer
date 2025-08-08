@@ -57,10 +57,16 @@ int
 vhsakmt_free_scratch_reserve_mem(struct vhsakmt_context *ctx, struct vhsakmt_object *obj)
 {
     uint32_t i;
+    struct vhsakmt_backend *backend = vhsakmt_device_backend();
 
-    for (i = 0; i < vhsakmt_device_backend()->vhsakmt_num_nodes; i++)
+    if (!backend) {
+        vhsa_err("Invalid device backend");
+        return -EINVAL;
+    }
+
+    for (i = 0; i < backend->vhsakmt_num_nodes; i++)
     {
-        struct vhsakmt_node *node = &vhsakmt_device_backend()->vhsakmt_nodes[i];
+        struct vhsakmt_node *node = &backend->vhsakmt_nodes[i];
         if (obj->bo >= (void*)node->scratch_vamgr.vm_va_base_addr && obj->bo < (void*)node->scratch_vamgr.vm_va_high_addr)
         {
             vhsa_log("free scratch reserve memory in node[%d]: %p, size: %lx", i, obj->bo, obj->base.size);
@@ -288,6 +294,22 @@ vhsakmt_alloc_memory(struct vhsakmt_context *ctx, struct vhsakmt_ccmd_memory_req
 
    obj = vhsakmt_context_object_create(*MemoryAddress, req->alloc_args.MemFlags.Value,
                                req->alloc_args.SizeInBytes, VHSAKMT_OBJ_HOST_MEM);
+   if (!obj) {
+      vhsa_err("Failed to create object for allocated memory");
+      // Cleanup the allocated memory
+      if (req->alloc_args.MemFlags.ui32.Scratch) {
+         // For scratch memory, free from vamgr
+         struct vhsakmt_node *node = vhsakmt_device_get_node(vhsakmt_device_backend(), req->alloc_args.PreferredNode);
+         if (node) {
+            hsakmt_free_from_vamgr(&node->scratch_vamgr, (uint64_t)*MemoryAddress);
+         }
+      } else {
+         // For host memory, free both HSA memory and vamgr
+         hsaKmtFreeMemory(*MemoryAddress, req->alloc_args.SizeInBytes);
+         hsakmt_free_from_vamgr(&ctx->vamgr, (uint64_t)*MemoryAddress);
+      }
+      return -ENOMEM;
+   }
 
    vhsakmt_context_object_set_blob_id(ctx, obj, req->blob_id);
 
@@ -399,7 +421,10 @@ vhsakmt_ccmd_memory(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req *
       break;
    }
    default:
-      vhsa_err("Unsopported memory CMD: %d", req->type);
+      vhsa_err("Unsupported memory CMD: %d", req->type);
+      VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
+      rsp->ret = -ENOSYS;
+      break;
    }
 
    if (rsp->ret)
@@ -452,6 +477,8 @@ vhsakmt_ccmd_gl_inter(struct vhsakmt_base_context *bctx, struct vhsakmt_ccmd_req
 
    default:
       vhsa_err("GL interop command: %d not support.", req->type);
+      VHSA_RSP_ALLOC(ctx, hdr, rsp_len);
+      rsp->ret = -ENOSYS;  // Function not implemented
       break;
    }
 
