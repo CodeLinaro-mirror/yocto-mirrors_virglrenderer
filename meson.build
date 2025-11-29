@@ -374,7 +374,7 @@ if with_venus
 
    if with_host_darwin
       venus_dep += declare_dependency(
-         compile_args : ['-DVK_USE_PLATFORM_METAL_EXT'],
+         compile_args : ['-DVK_USE_PLATFORM_METAL_EXT', '-DVK_ENABLE_BETA_EXTENSIONS'],
          dependencies : [
             dependency('appleframeworks', modules: ['Metal'], required: true),
             dependency('appleframeworks', modules: ['Foundation'], required: true),
