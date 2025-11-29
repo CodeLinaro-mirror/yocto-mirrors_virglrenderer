@@ -245,14 +245,30 @@ vkr_allocator_init(void)
    PFN_vkGetInstanceProcAddr get_proc_addr = vkr_allocator.vulkan_library.GetInstanceProcAddr;
    vkr_allocator_global_proc_table_init(get_proc_addr, vk);
 
+   const char *inst_ext_names[4];
+   uint32_t inst_ext_count = 0;
+   VkInstanceCreateFlags inst_flags = 0;
+
+#ifdef __APPLE__
+   if (vkr_library_has_portability_enumeration(
+          vk->EnumerateInstanceExtensionProperties)) {
+      inst_flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+      inst_ext_names[inst_ext_count++] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
+   }
+#endif /* __APPLE__ */
+
    VkApplicationInfo app_info = {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
       .apiVersion = VK_API_VERSION_1_1,
    };
 
+   assert(inst_ext_count <= ARRAY_SIZE(inst_ext_names));
    VkInstanceCreateInfo inst_info = {
       .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+      .flags = inst_flags,
       .pApplicationInfo = &app_info,
+      .enabledExtensionCount = inst_ext_count,
+      .ppEnabledExtensionNames = inst_ext_names,
    };
 
    VkInstance inst_handle;
