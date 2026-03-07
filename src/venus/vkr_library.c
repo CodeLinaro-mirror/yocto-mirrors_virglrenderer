@@ -4,9 +4,10 @@
  */
 
 #include "vkr_common.h"
-#include "vkr_library.h"
 
 #include <dlfcn.h>
+
+#include "vkr_library.h"
 
 void
 vkr_library_preload_icd(void)
@@ -41,9 +42,17 @@ vkr_library_load(struct vulkan_library *lib)
    if (lib->handle)
       return true;
 
+#ifdef __APPLE__
+   lib->handle = dlopen("libvulkan.dylib", RTLD_NOW | RTLD_LOCAL);
+   if (lib->handle == NULL)
+      lib->handle = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+   if (lib->handle == NULL)
+      lib->handle = dlopen("libMoltenVK.dylib", RTLD_NOW | RTLD_LOCAL);
+#else
    lib->handle = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
    if (lib->handle == NULL)
       lib->handle = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
+#endif
    if (lib->handle == NULL) {
       vkr_log("failed to open libvulkan: %s", dlerror());
       return false;
