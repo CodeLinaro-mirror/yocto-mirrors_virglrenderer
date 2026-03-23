@@ -3055,7 +3055,6 @@ spec@arb_texture_float@texwrap formats bordercolor-swizzled@GL_RGB16F- swizzled-
 spec@arb_texture_float@texwrap formats bordercolor@GL_RGB32F- border color only,Fail
 spec@arb_texture_float@texwrap formats bordercolor@GL_LUMINANCE_ALPHA16F_ARB- border color only,Fail
 
-
 # uprev Mesa in Virglrenderer
 spec@!opengl 1.1@depthstencil-default_fb-blit samples=2,Fail
 spec@!opengl 1.1@depthstencil-default_fb-blit samples=4,Fail
@@ -3093,6 +3092,8 @@ spec@!opengl 1.1@depthstencil-default_fb-readpixels-float-and-ushort samples=2,F
 spec@!opengl 1.1@depthstencil-default_fb-readpixels-float-and-ushort samples=4,Fail
 spec@!opengl 1.1@depthstencil-default_fb-readpixels-float-and-ushort samples=6,Fail
 spec@!opengl 1.1@depthstencil-default_fb-readpixels-float-and-ushort samples=8,Fail
+spec@amd_shader_trinary_minmax@execution@built-in-functions@tcs-max3-float-float-float,Crash
+spec@amd_shader_trinary_minmax@execution@built-in-functions@tcs-min3-float-float-float,Crash
 spec@arb_copy_image@arb_copy_image-formats --samples=2,Fail
 spec@arb_copy_image@arb_copy_image-formats --samples=2@Source: GL_ALPHA/Destination: GL_ALPHA,Fail
 spec@arb_copy_image@arb_copy_image-formats --samples=4,Fail
@@ -3136,6 +3137,42 @@ spec@arb_sample_shading@samplemask 8@noms mask_in_one,Fail
 spec@arb_sample_shading@samplemask 8@noms partition,Fail
 spec@arb_sample_shading@samplemask 8@sample mask_in_one,Fail
 spec@arb_spirv_extensions@execution@storage_buffer_storage_class@unsized-array,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-clamp-float-float-float,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-equal-vec2-vec2,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-equal-vec3-vec3,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-max-float-float,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-min-float-float,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-notequal-vec2-vec2,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-notequal-vec3-vec3,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-float-float-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-float-float,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-mat2-mat2-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-mat2-mat2,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-mat3x4-mat3x4-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec2-vec2-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec2-vec2,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec3-vec3-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec3-vec3,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec4-vec4-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec4-vec4,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-float-float-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-float-float,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-mat2-mat2-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-mat2-mat2,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-mat3x4-mat3x4-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-mat3x4-mat3x4,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec2-vec2-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec2-vec2,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec3-vec3-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec3-vec3,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec4-vec4-using-if,Crash
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec4-vec4,Crash
+spec@arb_tessellation_shader@execution@variable-indexing@tcs-input-array-float-index-rd,Crash
+spec@arb_tessellation_shader@execution@variable-indexing@tcs-input-array-vec2-index-rd,Crash
+spec@arb_tessellation_shader@execution@variable-indexing@tcs-input-array-vec3-index-rd,Crash
+spec@arb_tessellation_shader@execution@variable-indexing@vs-output-array-vec2-index-wr-before-tcs,Crash
+spec@arb_tessellation_shader@execution@variable-indexing@vs-output-array-vec3-index-wr-before-tcs,Crash
+spec@arb_tessellation_shader@execution@variable-indexing@vs-output-array-vec4-index-wr-before-tcs,Crash
 spec@arb_texture_cube_map@copyteximage cube samples=2,Fail
 spec@arb_texture_cube_map@copyteximage cube samples=4,Fail
 spec@arb_texture_cube_map@copyteximage cube samples=6,Fail

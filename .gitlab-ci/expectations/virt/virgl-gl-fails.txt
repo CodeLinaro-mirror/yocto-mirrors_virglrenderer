@@ -530,12 +530,50 @@ spec@!opengl 1.1@depthstencil-default_fb-drawpixels-24_8 samples=6,Fail
 spec@!opengl 1.1@depthstencil-default_fb-drawpixels-24_8 samples=8,Fail
 spec@!opengl 1.1@depthstencil-default_fb-drawpixels-32f_24_8_rev samples=6,Fail
 spec@!opengl 1.1@depthstencil-default_fb-drawpixels-32f_24_8_rev samples=8,Fail
+spec@amd_shader_trinary_minmax@execution@built-in-functions@tcs-max3-float-float-float,Fail
+spec@amd_shader_trinary_minmax@execution@built-in-functions@tcs-min3-float-float-float,Fail
 spec@arb_framebuffer_object@execution@msaa-alpha-to-coverage_alpha-to-one_write-z,Fail
 spec@arb_shader_image_load_store@max-size@image2DMS max size test/8x16384x8x1,Fail
 spec@arb_shader_image_load_store@max-size@image2DMS max size test/8x8x16384x1,Fail
 spec@arb_shader_image_load_store@max-size@image2DMSArray max size test/8x8x8x2048,Fail
 spec@arb_spirv_extensions@execution@storage_buffer_storage_class@unsized-array,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-clamp-float-float-float,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-equal-vec2-vec2,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-equal-vec3-vec3,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-max-float-float,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-min-float-float,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-notequal-vec2-vec2,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-notequal-vec3-vec3,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-float-float-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-float-float,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-mat2-mat2-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-mat2-mat2,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-mat3x4-mat3x4-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec2-vec2-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec2-vec2,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec3-vec3-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec3-vec3,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec4-vec4-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-eq-vec4-vec4,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-float-float-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-float-float,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-mat2-mat2-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-mat2-mat2,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-mat3x4-mat3x4-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-mat3x4-mat3x4,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec2-vec2-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec2-vec2,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec3-vec3-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec3-vec3,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec4-vec4-using-if,Fail
+spec@arb_tessellation_shader@execution@built-in-functions@tcs-op-ne-vec4-vec4,Fail
 spec@arb_tessellation_shader@execution@tcs-output-unmatched,Fail
+spec@arb_tessellation_shader@execution@variable-indexing@tcs-input-array-float-index-rd,Fail
+spec@arb_tessellation_shader@execution@variable-indexing@tcs-input-array-vec2-index-rd,Fail
+spec@arb_tessellation_shader@execution@variable-indexing@tcs-input-array-vec3-index-rd,Fail
+spec@arb_tessellation_shader@execution@variable-indexing@vs-output-array-vec2-index-wr-before-tcs,Fail
+spec@arb_tessellation_shader@execution@variable-indexing@vs-output-array-vec3-index-wr-before-tcs,Fail
+spec@arb_tessellation_shader@execution@variable-indexing@vs-output-array-vec4-index-wr-before-tcs,Fail
 spec@arb_texture_rectangle@copyteximage rect samples=6,Fail
 spec@arb_texture_rectangle@copyteximage rect samples=8,Fail
 spec@egl_ext_device_query_name@conformance,Fail
