@@ -11,6 +11,7 @@
 #include "vkr_context.h"
 #include "vkr_descriptor_set.h"
 #include "vkr_device_memory.h"
+#include "vkr_metal_helpers.h"
 #include "vkr_physical_device.h"
 #include "vkr_queue.h"
 
@@ -185,6 +186,10 @@ vkr_dispatch_vkCreateDevice(struct vn_dispatch_context *dispatch,
    vkr_device_init_proc_table(dev, physical_dev->api_version,
                               args->pCreateInfo->ppEnabledExtensionNames,
                               args->pCreateInfo->enabledExtensionCount);
+
+   if (physical_dev->EXT_external_memory_metal)
+      dev->mtl_device =
+         vkr_metal_get_device(dev->base.handle.device, vk->GetDeviceProcAddr);
 
    free(exts);
 
