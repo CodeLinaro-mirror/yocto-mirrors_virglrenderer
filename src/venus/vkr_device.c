@@ -130,6 +130,8 @@ vkr_dispatch_vkCreateDevice(struct vn_dispatch_context *dispatch,
    /* append extensions for our own use */
    const char **exts = NULL;
    uint32_t ext_count = args->pCreateInfo->enabledExtensionCount;
+   ext_count += physical_dev->EXT_external_memory_metal;
+   ext_count += physical_dev->EXT_metal_objects;
    ext_count += physical_dev->KHR_external_memory_fd;
    ext_count += physical_dev->EXT_external_memory_dma_buf;
    ext_count += physical_dev->KHR_external_fence_fd;
@@ -139,12 +141,19 @@ vkr_dispatch_vkCreateDevice(struct vn_dispatch_context *dispatch,
          args->ret = VK_ERROR_OUT_OF_HOST_MEMORY;
          return;
       }
-      for (uint32_t i = 0; i < args->pCreateInfo->enabledExtensionCount; i++)
-         exts[i] = args->pCreateInfo->ppEnabledExtensionNames[i];
 
-      ext_count = args->pCreateInfo->enabledExtensionCount;
+      ext_count = 0;
+      for (uint32_t i = 0; i < args->pCreateInfo->enabledExtensionCount; i++)
+         exts[ext_count++] = args->pCreateInfo->ppEnabledExtensionNames[i];
+
+#ifdef __APPLE__
+      if (physical_dev->EXT_external_memory_metal)
+         exts[ext_count++] = VK_EXT_EXTERNAL_MEMORY_METAL_EXTENSION_NAME;
+      if (physical_dev->EXT_metal_objects)
+         exts[ext_count++] = VK_EXT_METAL_OBJECTS_EXTENSION_NAME;
+#endif
       if (physical_dev->KHR_external_memory_fd)
-         exts[ext_count++] = "VK_KHR_external_memory_fd";
+         exts[ext_count++] = VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME;
       if (physical_dev->EXT_external_memory_dma_buf)
          exts[ext_count++] = "VK_EXT_external_memory_dma_buf";
       if (physical_dev->KHR_external_fence_fd)
