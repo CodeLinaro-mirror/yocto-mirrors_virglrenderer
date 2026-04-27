@@ -301,7 +301,7 @@ vkr_dispatch_vkAllocateMemory(struct vn_dispatch_context *dispatch,
 
    /* macOS: use shared memory + Metal buffer for HOST_VISIBLE cross-process sharing. */
    struct vkr_mtl_shm *mtl_shm = NULL;
-#ifdef VK_EXT_external_memory_metal
+#ifdef __APPLE__
    VkImportMemoryMetalHandleInfoEXT local_metal_import = {
       .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_METAL_HANDLE_INFO_EXT,
    };
@@ -324,7 +324,7 @@ vkr_dispatch_vkAllocateMemory(struct vn_dispatch_context *dispatch,
 
       valid_fd_types = 1 << VIRGL_RESOURCE_FD_SHM;
    } else
-#endif
+#endif /* __APPLE__ */
    if ((property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && !res_info) {
       /* An implementation can support dma_buf import along with opaque fd export/import.
        * If the client driver is using external memory and requesting dma_buf, without
