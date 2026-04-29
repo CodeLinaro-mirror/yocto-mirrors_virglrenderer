@@ -147,14 +147,12 @@ vkr_dispatch_vkCreateDevice(struct vn_dispatch_context *dispatch,
       for (uint32_t i = 0; i < args->pCreateInfo->enabledExtensionCount; i++)
          exts[ext_count++] = args->pCreateInfo->ppEnabledExtensionNames[i];
 
-#ifdef __APPLE__
       if (physical_dev->EXT_external_memory_metal)
-         exts[ext_count++] = VK_EXT_EXTERNAL_MEMORY_METAL_EXTENSION_NAME;
+         exts[ext_count++] = "VK_EXT_external_memory_metal";
       if (physical_dev->EXT_metal_objects)
-         exts[ext_count++] = VK_EXT_METAL_OBJECTS_EXTENSION_NAME;
-#endif
+         exts[ext_count++] = "VK_EXT_metal_objects";
       if (physical_dev->KHR_external_memory_fd)
-         exts[ext_count++] = VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME;
+         exts[ext_count++] = "VK_KHR_external_memory_fd";
       if (physical_dev->EXT_external_memory_dma_buf)
          exts[ext_count++] = "VK_EXT_external_memory_dma_buf";
       if (physical_dev->KHR_external_fence_fd)
