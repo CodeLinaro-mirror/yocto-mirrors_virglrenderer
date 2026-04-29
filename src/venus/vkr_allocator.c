@@ -46,6 +46,7 @@
 #define VKR_ALLOCATOR_MAX_DEVICE_COUNT 4
 
 struct vkr_inst_proc_table {
+   PFN_vkEnumerateInstanceExtensionProperties EnumerateInstanceExtensionProperties;
    PFN_vkCreateInstance CreateInstance;
    PFN_vkDestroyInstance DestroyInstance;
    PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices;
@@ -188,6 +189,17 @@ vkr_allocator_fini(void)
 }
 
 static void
+vkr_allocator_global_proc_table_init(PFN_vkGetInstanceProcAddr get_proc_addr,
+                                     struct vkr_inst_proc_table *vk)
+{
+#define VN_GIPA(cmd) (PFN_##cmd) get_proc_addr(VK_NULL_HANDLE, #cmd)
+   vk->EnumerateInstanceExtensionProperties =
+      VN_GIPA(vkEnumerateInstanceExtensionProperties);
+   vk->CreateInstance = VN_GIPA(vkCreateInstance);
+#undef VN_GIPA
+}
+
+static void
 vkr_allocator_inst_proc_table_init(VkInstance inst_handle,
                                    PFN_vkGetInstanceProcAddr get_proc_addr,
                                    struct vkr_inst_proc_table *vk)
@@ -231,6 +243,7 @@ vkr_allocator_init(void)
 
    /* Get vkGetInstanceProcAddr from libvulkan */
    PFN_vkGetInstanceProcAddr get_proc_addr = vkr_allocator.vulkan_library.GetInstanceProcAddr;
+   vkr_allocator_global_proc_table_init(get_proc_addr, vk);
 
    VkApplicationInfo app_info = {
       .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -243,8 +256,6 @@ vkr_allocator_init(void)
    };
 
    VkInstance inst_handle;
-   vk->CreateInstance =
-      (PFN_vkCreateInstance)get_proc_addr(VK_NULL_HANDLE, "vkCreateInstance");
    res = vk->CreateInstance(&inst_info, NULL, &inst_handle);
    if (res != VK_SUCCESS)
       goto fail;
