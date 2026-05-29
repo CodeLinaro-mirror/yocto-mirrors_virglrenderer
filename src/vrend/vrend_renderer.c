@@ -12094,7 +12094,7 @@ static int get_glsl_version(void)
 
    version_str = glGetString(GL_SHADING_LANGUAGE_VERSION);
    if (!version_str) {
-      virgl_error("GL_SHADING_LANGUAGE_VERSION query failed with empty output.");
+      virgl_error("GL_SHADING_LANGUAGE_VERSION query failed with empty output.\n");
       return -1;
    }
 
@@ -12107,7 +12107,7 @@ static int get_glsl_version(void)
    }
 
    if (count != 2) {
-      virgl_error("GL_SHADING_LANGUAGE_VERSION query failed with unexpected version format.");
+      virgl_error("GL_SHADING_LANGUAGE_VERSION query failed with unexpected version format.\n");
       return -1;
    }
 
