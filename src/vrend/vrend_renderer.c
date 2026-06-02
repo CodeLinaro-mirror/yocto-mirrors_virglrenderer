@@ -9095,6 +9095,10 @@ static inline bool resource_contains_box(struct vrend_resource *res,
                 box->x > width || box->y > height || box->z > depth))
       return false;
 
+   /* Check box size sanity */
+   if (unlikely(box->width < 0 || box->height < 0 || box->depth < 0))
+      return false;
+
    end_x = (int64_t) box->x + (int64_t) box->width;
    end_y = (int64_t) box->y + (int64_t) box->height;
    end_z = (int64_t) box->z + (int64_t) box->depth;
