@@ -9679,7 +9679,7 @@ static int vrend_transfer_send_getteximage(struct vrend_resource *res,
    return 0;
 }
 
-static void do_readpixels(struct vrend_resource *res,
+static bool do_readpixels(struct vrend_resource *res,
                           int idx, uint32_t level, uint32_t layer,
                           GLint x, GLint y,
                           GLsizei width, GLsizei height,
@@ -9687,6 +9687,7 @@ static void do_readpixels(struct vrend_resource *res,
                           GLsizei bufSize, void *data)
 {
    GLuint fb_id;
+   GLenum err;
 
    glGenFramebuffers(1, &fb_id);
    glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
@@ -9735,7 +9736,15 @@ static void do_readpixels(struct vrend_resource *res,
    else
       glReadPixels(x, y, width, height, format, type, data);
 
+   err = glGetError();
    glDeleteFramebuffers(1, &fb_id);
+
+   if (err != GL_NO_ERROR) {
+      virgl_error("glReadPixels failed: GL error %d\n", err);
+      return false;
+   }
+
+   return true;
 }
 
 static int vrend_transfer_send_readpixels(struct vrend_context *ctx,
@@ -9746,7 +9755,7 @@ static int vrend_transfer_send_readpixels(struct vrend_context *ctx,
    char *myptr = (char*)iov[0].iov_base + info->offset;
    int need_temp = 0;
    char *data;
-   bool actually_invert, separate_invert = false;
+   bool actually_invert, separate_invert = false, read_pixels;
    GLenum format, type;
    GLint y1;
    uint64_t send_size = 0;
@@ -9861,8 +9870,26 @@ static int vrend_transfer_send_readpixels(struct vrend_context *ctx,
       }
    }
 
-   do_readpixels(res, 0, info->level, info->box->z, info->box->x, y1,
-                 info->box->width, info->box->height, format, type, send_size, data);
+   read_pixels = do_readpixels(res, 0, info->level, info->box->z, info->box->x, y1,
+                               info->box->width, info->box->height, format, type,
+                               send_size, data);
+
+   if (has_feature(feat_mesa_invert) && actually_invert)
+      glPixelStorei(GL_PACK_INVERT_MESA, 0);
+   if (!need_temp && row_stride)
+      glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+   glPixelStorei(GL_PACK_ALIGNMENT, 4);
+
+#if UTIL_ARCH_BIG_ENDIAN
+   glPixelStorei(GL_PACK_SWAP_BYTES, 0);
+#endif
+
+   if (!read_pixels) {
+      if (need_temp)
+         free(data);
+      glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
+      return EINVAL;
+   }
 
    /* on GLES, texture-backed BGR* resources are always stored with RGB* internal format, but
     * the guest will expect to readback the data in BGRA format.
@@ -9881,15 +9908,6 @@ static int vrend_transfer_send_readpixels(struct vrend_context *ctx,
       else
          vrend_scale_depth(data, send_size, depth_scale);
    }
-   if (has_feature(feat_mesa_invert) && actually_invert)
-      glPixelStorei(GL_PACK_INVERT_MESA, 0);
-   if (!need_temp && row_stride)
-      glPixelStorei(GL_PACK_ROW_LENGTH, 0);
-   glPixelStorei(GL_PACK_ALIGNMENT, 4);
-
-#if UTIL_ARCH_BIG_ENDIAN
-   glPixelStorei(GL_PACK_SWAP_BYTES, 0);
-#endif
 
    if (need_temp) {
       write_transfer_data(&res->base, iov, num_iovs, data,
@@ -12977,7 +12995,11 @@ void *vrend_renderer_get_cursor_contents(struct pipe_resource *pres,
       glBindTexture(res->target, res->gl_id);
       glGetnTexImageARB(res->target, 0, format, type, size, data);
    } else if (vrend_state.use_gles) {
-      do_readpixels(res, 0, 0, 0, 0, 0, *width, *height, format, type, size, data);
+      if (!do_readpixels(res, 0, 0, 0, 0, 0, *width, *height, format, type, size, data)) {
+         free(data);
+         free(data2);
+         return NULL;
+      }
    } else {
       glBindTexture(res->target, res->gl_id);
       glGetTexImage(res->target, 0, format, type, data);
