@@ -362,7 +362,7 @@ drm_context_get_shmem_blob(struct drm_context *dctx,
       return -EINVAL;
    }
 
-   if ((blob_size < sizeof(*dctx->shmem)) || (blob_size > UINT32_MAX)) {
+   if ((blob_size < shmem_size) || (blob_size > UINT32_MAX)) {
       drm_err("invalid blob size 0x%" PRIx64, blob_size);
       return -EINVAL;
    }
