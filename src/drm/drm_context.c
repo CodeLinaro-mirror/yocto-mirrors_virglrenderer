@@ -52,13 +52,12 @@ drm_context_unmap_shmem_blob(struct drm_context *dctx)
    if (!dctx->shmem)
       return;
 
-   uint32_t blob_size = dctx->rsp_mem_sz + dctx->shmem->rsp_mem_offset;
-
-   munmap(dctx->shmem, blob_size);
+   munmap(dctx->shmem, dctx->blob_size);
 
    dctx->shmem = NULL;
    dctx->rsp_mem = NULL;
    dctx->rsp_mem_sz = 0;
+   dctx->blob_size = 0;
 }
 
 static int
@@ -357,7 +356,7 @@ drm_context_get_shmem_blob(struct drm_context *dctx,
       return -EINVAL;
    }
 
-   if (dctx->shmem) {
+   if (dctx->shmem || dctx->blob_size) {
       drm_err("there can be only one!");
       return -EINVAL;
    }
@@ -393,8 +392,9 @@ drm_context_get_shmem_blob(struct drm_context *dctx,
    dctx->shmem->rsp_mem_offset = shmem_size;
 
    uint8_t *ptr = (uint8_t *)dctx->shmem;
-   dctx->rsp_mem = &ptr[dctx->shmem->rsp_mem_offset];
-   dctx->rsp_mem_sz = blob_size - dctx->shmem->rsp_mem_offset;
+   dctx->rsp_mem = ptr + shmem_size;
+   dctx->rsp_mem_sz = blob_size - shmem_size;
+   dctx->blob_size = blob_size;
 
    blob->u.fd = fd;
    blob->type = VIRGL_RESOURCE_FD_SHM;
