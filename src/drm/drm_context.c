@@ -60,6 +60,22 @@ drm_context_unmap_shmem_blob(struct drm_context *dctx)
    dctx->blob_size = 0;
 }
 
+static bool
+drm_check_shm_bounds(struct drm_context *dctx, const struct vdrm_ccmd_req *hdr,
+                     size_t len)
+{
+   size_t rsp_mem_sz = dctx->rsp_mem_sz;
+   size_t off = hdr->rsp_off;
+
+   if ((off > rsp_mem_sz) || (len > rsp_mem_sz - off)) {
+      drm_err("invalid shm offset: off=%zu, len=%zu (shmem_size=%zu)",
+              off, len, rsp_mem_sz);
+      return false;
+   }
+
+   return true;
+}
+
 static int
 drm_context_submit_cmd_dispatch(struct drm_context *dctx, const struct vdrm_ccmd_req *hdr)
 {
@@ -116,13 +132,27 @@ drm_context_submit_cmd_dispatch(struct drm_context *dctx, const struct vdrm_ccmd
    if (!dctx->shmem)
       goto free_response_buffer;
 
-   /* To prevent TOCTOU attacks, a shadow buffer is always used.
-    * We need to copy back to the actual rsp buffer.
-    */
-   struct vdrm_ccmd_rsp *rsp = (struct vdrm_ccmd_rsp *)&dctx->rsp_mem[hdr->rsp_off];
    if (dctx->current_rsp) {
-      uint32_t len = *(volatile uint32_t *)&rsp->len;
-      len = MIN2(len, dctx->current_rsp->len);
+      uint32_t len = dctx->current_rsp->len;
+
+     /* To prevent TOCTOU attacks, a shadow buffer is always used.
+      * We need to copy back to the actual rsp buffer. Add a bounds
+      * check for defense in depth.
+      */
+      if (!drm_check_shm_bounds(dctx, hdr, len)) {
+         assert(!"Failed bounds check when copying to response buffer");
+         ret = -EFAULT;
+         goto free_response_buffer;
+      }
+
+      struct vdrm_ccmd_rsp *rsp = (struct vdrm_ccmd_rsp *)&dctx->rsp_mem[hdr->rsp_off];
+      uint32_t untrusted_len = *(volatile uint32_t *)&rsp->len;
+
+      /* WARNING: MIN2() evaluates its arguments more than once!
+       * DO NOT inline the above volatile load into it! That would
+       * introduce a double fetch vulnerability.
+       */
+      len = MIN2(len, untrusted_len);
       memcpy(rsp, dctx->current_rsp, len);
       rsp->len = len;
       free(dctx->current_rsp);
@@ -321,14 +351,8 @@ void *
 drm_context_rsp(struct drm_context *dctx, const struct vdrm_ccmd_req *hdr,
                 size_t len)
 {
-   size_t rsp_mem_sz = dctx->rsp_mem_sz;
-   size_t off = hdr->rsp_off;
-
-   if ((off > rsp_mem_sz) || (len > rsp_mem_sz - off)) {
-      drm_err("invalid shm offset: off=%zu, len=%zu (shmem_size=%zu)",
-              off, len, rsp_mem_sz);
+   if (!drm_check_shm_bounds(dctx, hdr, len))
       return NULL;
-   }
 
    /* The shared buffer might be writable by the guest.  To avoid TOCTOU,
     * data races, and other security problems, always allocate a shadow buffer.
