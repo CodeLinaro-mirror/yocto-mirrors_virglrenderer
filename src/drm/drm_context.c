@@ -107,19 +107,17 @@ drm_context_submit_cmd_dispatch(struct drm_context *dctx, const struct vdrm_ccmd
 
    if (ret) {
       drm_err("%s: dispatch failed: %d (%s)", ccmd->name, ret, strerror(errno));
-      return ret;
+      goto free_response_buffer;
    }
 
    /* Commands with no response, like SET_DEBUGINFO, could be sent before
     * the shmem buffer is allocated.
     */
    if (!dctx->shmem)
-      return 0;
+      goto free_response_buffer;
 
-   /* If the response length from the guest is smaller than the
-    * expected size, ie. newer host and older guest, then a shadow
-    * copy is used, and we need to copy back to the actual rsp
-    * buffer.
+   /* To prevent TOCTOU attacks, a shadow buffer is always used.
+    * We need to copy back to the actual rsp buffer.
     */
    struct vdrm_ccmd_rsp *rsp = (struct vdrm_ccmd_rsp *)&dctx->rsp_mem[hdr->rsp_off];
    if (dctx->current_rsp) {
@@ -134,6 +132,16 @@ drm_context_submit_cmd_dispatch(struct drm_context *dctx, const struct vdrm_ccmd
    p_atomic_xchg(&dctx->shmem->seqno, hdr->seqno);
 
    return 0;
+
+free_response_buffer:
+   /* Free the response buffer. This both prevents leaks
+    * and (more importantly) ensures that if a response
+    * is about to be copied to shared memory, its offset
+    * was validated by the *current* command's handler.
+    */
+   free(dctx->current_rsp);
+   dctx->current_rsp = NULL;
+   return ret;
 }
 
 static int
