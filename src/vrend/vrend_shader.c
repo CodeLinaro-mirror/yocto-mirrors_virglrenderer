@@ -3948,7 +3948,7 @@ translate_load(const struct dump_ctx *ctx,
    if (src->Register.File == TGSI_FILE_IMAGE) {
 
       /* Bail out if we want to load from an image that is not actually used */
-      if (sinfo->sreg_index < 0 || sinfo->sreg_index > PIPE_MAX_SHADER_IMAGES) {
+      if (sinfo->sreg_index < 0 || sinfo->sreg_index >= PIPE_MAX_SHADER_IMAGES) {
          return false;
       }
 
