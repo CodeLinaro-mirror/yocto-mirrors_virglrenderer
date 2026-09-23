@@ -3828,7 +3828,7 @@ translate_store(const struct dump_ctx *ctx,
       if (!((1 << dinfo->dest_index) & ctx->images_used_mask))
             return;
 
-      if (!set_image_qualifier(images, ctx->images_used_mask, inst, inst->Src[0].Register.Index, inst->Src[0].Register.Indirect)) {
+      if (!set_image_qualifier(images, ctx->images_used_mask, inst, dst_reg->Register.Index, dst_reg->Register.Indirect)) {
          set_buf_error(glsl_strbufs);
          return;
       }
