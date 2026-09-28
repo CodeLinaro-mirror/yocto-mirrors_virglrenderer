@@ -8610,8 +8610,14 @@ static void vrend_resource_gbm_init(struct vrend_resource *gr, uint32_t format)
    if (gr->base.depth0 != 1 || gr->base.last_level != 0 || gr->base.nr_samples > 1)
       return;
 
-   if (!gbm || !gbm->device || !gbm_format || !gbm_flags)
+   if (!gbm || !gbm->device || !gbm_format)
       return;
+
+#ifdef MINIGBM
+   /* minigbm requires non-zero gbm use flags */
+   if (!gbm_flags)
+      return;
+#endif
 
    if (!virgl_gbm_external_allocation_preferred(gr->base.bind))
       return;
